@@ -1,1 +1,1 @@
-hello fuck
+{model}_trial{number}
