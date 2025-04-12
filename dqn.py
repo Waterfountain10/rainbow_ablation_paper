@@ -8,9 +8,10 @@ import gym_anytrading
 from gym_anytrading.datasets import FOREX_EURUSD_1H_ASK, STOCKS_GOOGL
 
 from util.NeuralNet import NeuralNet
-from util.ReplayBuffer import ReplayBuffer
+from util.ReplayBuffer import ReplayBuffer, ReplayBufferReturn
 import torch.nn.functional as F
 from tqdm import tqdm
+from numbers import Number
 
 
 class DQN:
@@ -33,6 +34,7 @@ class DQN:
         #     storage=storage, batch_size=batch_size
         # )  # TODO: could add prefetch (multithreaded thing)
         self.obs_shape = env.observation_space.shape
+        assert(self.obs_shape is not None)
         self.memory = ReplayBuffer(self.obs_shape, mem_size, batch_size=batch_size)
         self.gamma = gamma
         self.epsilon = max_epsilon
@@ -43,7 +45,10 @@ class DQN:
             (max_epsilon - min_epsilon) / epsilon_decay if epsilon_decay > 0 else 0
         )
         # self.state_size = env.observation_space.shape[0]
-        self.action_dim = env.action_space.n
+        if isinstance(env.action_space, gym.spaces.Discrete):
+            self.action_dim = env.action_space.n
+        else:
+            raise ValueError("Action space must be discrete")
 
         self.device = "cpu"
 
@@ -53,8 +58,8 @@ class DQN:
         # if torch.mps.is_available():
         #     self.device = "mps"
 
-        self.dqn_network = NeuralNet(self.obs_shape, self.action_dim).to(self.device)
-        self.dqn_target = NeuralNet(self.obs_shape, self.action_dim).to(self.device)
+        self.dqn_network = NeuralNet(self.obs_shape, int(self.action_dim)).to(self.device)
+        self.dqn_target = NeuralNet(self.obs_shape, int(self.action_dim)).to(self.device)
         # make identical copies of the neural net
         self.dqn_target.load_state_dict(self.dqn_network.state_dict())
 
@@ -79,22 +84,23 @@ class DQN:
                 q_vaues = self.dqn_network(obs_tensor)
             return q_vaues.argmax().item()
 
-    def step(self, state: np.ndarray) -> Tuple[np.ndarray, np.float64, bool]:
+    def step(self, state: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.float32, bool]:
         """
         Returns:
             action, next_state, reward, done
         """
         action = self.select_action(state)
         next_state, reward, terminated, trucated, _ = self.env.step(action)
+        reward = float(reward)
         done = terminated or trucated
 
-        self.memory.store(state, action, reward, next_state, done)
+        self.memory.store(state, int(action), reward, next_state, done)
         self.total_steps += 1
         self.epsilon = max(self.min_epsilon, self.epsilon - self.epsilon_decay_rate)
 
-        return action, next_state, reward, done
+        return action, next_state, np.float32(reward), done
 
-    def update_model(self) -> torch.TensorType:
+    def update_model(self) -> float:
         samples = self.memory.sample_batch()
         loss = self._compute_dqn_loss(samples)
 
@@ -104,7 +110,7 @@ class DQN:
 
         return loss.item()
 
-    def _compute_dqn_loss(self, samples: Dict[str, np.ndarray]) -> torch.Tensor:
+    def _compute_dqn_loss(self, samples: Dict[str, np.ndarray]|ReplayBufferReturn) -> torch.Tensor:
         state = torch.FloatTensor(samples["obs"]).to(self.device)
         next_state = torch.FloatTensor(samples["next_obs"]).to(self.device)
         action = torch.LongTensor(samples["acts"]).unsqueeze(1).to(self.device)
@@ -129,33 +135,35 @@ class DQN:
         self.dqn_target.load_state_dict(self.dqn_network.state_dict())
 
     def train(self, num_episodes, show_progress=True):
-        rewards = []
+            rewards = []
+            episode_bar = None
 
-        if show_progress:
-            episode_bar = tqdm(total=num_episodes, desc="Episodes", leave=False)
-
-        for episode in range(num_episodes):
-            state, _ = self.env.reset()
-            done = False
-            ep_reward = 0
-            steps_n = 0
-
-            while not done:
-                action, next_state, reward, done = self.step(state)
-                loss = self.update_model()
-                state = next_state
-                ep_reward += reward
-                steps_n += 1
-
-            rewards.append(ep_reward)
             if show_progress:
-                episode_bar.update(1)
-                episode_bar.set_postfix(reward=f"{ep_reward:.1f}", steps=steps_n)
+                episode_bar = tqdm(total=num_episodes, desc="Episodes", leave=False)
 
-        if show_progress:
-            episode_bar.close()
-        self.env.close()
-        return rewards
+            for episode in range(num_episodes):
+                state, _ = self.env.reset()
+                done = False
+                ep_reward = 0
+                steps_n = 0
+
+                while not done:
+                    action, next_state, reward, done = self.step(state)
+                    # Store loss for potential future metrics tracking
+                    training_loss = self.update_model()
+                    state = next_state
+                    ep_reward += reward
+                    steps_n += 1
+
+                rewards.append(ep_reward)
+                if show_progress and episode_bar is not None:
+                    episode_bar.update(1)
+                    episode_bar.set_postfix(reward=f"{ep_reward:.1f}", steps=steps_n)
+
+            if show_progress and episode_bar is not None:
+                episode_bar.close()
+            self.env.close()
+            return rewards
 
     def plot(self):
         pass
