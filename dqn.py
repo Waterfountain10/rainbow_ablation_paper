@@ -4,25 +4,13 @@ import numpy as np
 import torch
 
 import gymnasium as gym
+import gym_anytrading
+from gym_anytrading.datasets import FOREX_EURUSD_1H_ASK, STOCKS_GOOGL
 
-# import gym_anytrading
-import pandas as pd
-
-# import ale_py
-import torch.nn.functional as F
-from tqdm import tqdm
 from util.NeuralNet import NeuralNet
 from util.ReplayBuffer import ReplayBuffer
-
-# --- FinRL Imports ---
-from finrl.meta.env_stock_trading.env_stocktrading import StockTradingEnv
-from finrl.meta.preprocessor.preprocessors import FeatureEngineer, data_split
-from finrl.meta.data_processor import DataProcessor
-from finrl import config_tickers  # Or provide your own list
-import os
-import matplotlib.pyplot as plt
-import yfinance as yf
-from datetime import datetime
+import torch.nn.functional as F
+from tqdm import tqdm
 
 
 class DQN:
@@ -177,88 +165,19 @@ if __name__ == "__main__":
     # Parameters for DQN
     MEMORY_SIZE = 10000
     BATCH_SIZE = 64
-    TARGET_UPDATE_FREQ = 1000
-    EPSILON_DECAY_STEPS = 10000
+    TARGET_UPDATE_FREQ = 10
+    EPSILON_DECAY_STEPS = 700
     LEARNING_RATE = 1e-4
-    NUM_EPISODES = 10  # Small number for testing
+    NUM_EPISODES = 300  # Small number for testing
 
-    # Download data directly with yfinance for simplicity
-    ticker_list = ["AAPL"]
-    start_date = "2018-01-01"
-    end_date = "2019-01-01"
-
-    print("Downloading data...")
-    # Direct yfinance approach to avoid processor issues
-    df = yf.download(ticker_list, start=start_date, end=end_date)
-    df = df.reset_index()  # Make date a column instead of index
-
-    # Convert to expected format
-    df.rename(
-        columns={
-            "Date": "date",
-            "Open": "open",
-            "High": "high",
-            "Low": "low",
-            "Close": "close",
-            "Volume": "volume",
-            "Adj Close": "adjcp",
-        },
-        inplace=True,
+    env = gym.make(
+        "forex-v0",
+        df=FOREX_EURUSD_1H_ASK,
+        window_size=10,
+        frame_bound=(10, int(0.25 * len(FOREX_EURUSD_1H_ASK))),
+        unit_side="right",
     )
 
-    # Add ticker column
-    df["tic"] = "AAPL"
-
-    # Add some basic technical indicators
-    print("Adding technical indicators...")
-    df["macd"] = df["close"].ewm(span=12).mean() - df["close"].ewm(span=26).mean()
-    df["rsi_30"] = 100 - (
-        100
-        / (
-            1
-            + (
-                df["close"].diff(1).clip(lower=0).rolling(30).mean()
-                / -df["close"].diff(1).clip(upper=0).rolling(30).mean()
-            )
-        )
-    )
-
-    # Drop NaN values that result from indicators
-    df.dropna(inplace=True)
-
-    # Reset index to ensure proper indexing
-    df = df.reset_index(drop=True)
-
-    # This is critical: Set date as the index
-    df["date"] = pd.to_datetime(df["date"])
-
-    # Set up the environment
-    print("Setting up environment...")
-    stock_dimension = len(df["tic"].unique())
-    state_space = 1 + 2 * stock_dimension + 2  # cash + shares + 2 technical indicators
-
-    # Initialize with zero shares for each stock
-    num_stock_shares = [0] * stock_dimension
-
-    env_kwargs = {
-        "hmax": 100,  # Max shares to trade
-        "initial_amount": 10000,  # Initial cash
-        "buy_cost_pct": 0.001,  # Transaction fee for buying
-        "sell_cost_pct": 0.001,  # Transaction fee for selling
-        "state_space": state_space,
-        "stock_dim": stock_dimension,
-        "tech_indicator_list": ["macd", "rsi_30"],
-        "action_space": stock_dimension,
-        "reward_scaling": 1e-4,
-        "num_stock_shares": num_stock_shares,
-        #"if_discrete": True,  # Ensure discrete action space
-    }
-
-    # Create the environment
-    env = StockTradingEnv(df=df, **env_kwargs)
-
-    # Initialize and train the DQN agent
-    print("Initializing agent...")
     agent = DQN(
         env=env,
         mem_size=MEMORY_SIZE,
@@ -268,15 +187,5 @@ if __name__ == "__main__":
         alpha=LEARNING_RATE,
     )
 
-    print("Training agent...")
     rewards = agent.train(NUM_EPISODES)
-    print(f"Average reward over {NUM_EPISODES} episodes: {np.mean(rewards)}")
-
-    # Plot the rewards
-    plt.figure(figsize=(10, 5))
-    plt.plot(rewards)
-    plt.title("Rewards per Episode")
-    plt.xlabel("Episode")
-    plt.ylabel("Total Reward")
-    plt.savefig("dqn_rewards.png")
-    plt.show()
+    print(np.mean(rewards))
