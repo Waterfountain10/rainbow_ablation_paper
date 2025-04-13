@@ -8,7 +8,7 @@ class SegmentTree:
         self.tree = []
         self.function = function
         '''
-        ex. cap = 3,  tree[cap*2] = tree[6]
+        ex. cap = 4,  tree[cap*2] = tree[8]
 
                             [0 to 3] i=1
                             /             \
@@ -42,7 +42,7 @@ class SegmentTree:
             return self.tree[self.capacity + idx] # offset to get the leaf's value
 
 
-    def apply_function(self, range_start:int, range_end:int):
+    def apply_function(self, range_start = 0, range_end = 0):
         '''Return the result of applying function (either min or sum) to a subsequence of array (self.tree).'''
         if range_end <= 0:
             range_end += self.capacity
@@ -78,7 +78,7 @@ class SumTree(SegmentTree):
         for _ in range(2 * self.capacity): # initialize tree with 0-s
             self.tree.append(0.0)
 
-    def apply_sum(self, range_start, range_end):
+    def apply_sum(self, range_start = 0, range_end = 0):
         return super().apply_function(range_start, range_end)
 
     def retrieve(self, upperbound):
@@ -87,7 +87,7 @@ class SumTree(SegmentTree):
         Upperbound is a float from 0 to 1.0
         '''
         idx = 1 # start at root
-        while idx < self.capacity;
+        while idx < self.capacity:
             left_child = 2 * idx
             right_child = left_child + 1
             if self.tree[left_child] > upperbound: # if left child is already higher than upperbound, then right CANT be better
@@ -104,5 +104,49 @@ class MinTree(SegmentTree):
         for _ in range(2 * self.capacity): # initialize tree with float(inf)
             self.tree.append(float("inf"))
 
-    def apply_min(self, range_start, range_end):
+    def apply_min(self, range_start = 0, range_end = 0):
         return super().apply_function(range_start, range_end)
+
+
+if __name__ == "__main__":
+    CAPACITY = 4
+    OMEGA = 0.6
+    BETA = 0.4
+    priorities = [0.1, 0.3, 0.2, 0.4]
+
+    '''
+    ex. cap = 4,  tree[cap*2] = tree[8]
+
+                        [0 to 3] i=1
+                        /             \
+            [0 to 1] i=2                [2 to 3] i=3
+                /       \               /           \
+    [0 to 0] i=4    [1 to 1] i=5   [2 to 2] i=6    [3 to 3] i=7
+        0.1             0.3             0.2             0.4
+    '''
+
+    sum_tree = SumTree(CAPACITY)
+    min_tree = MinTree(CAPACITY)
+
+    # fill in the trees
+    for i, p in enumerate(priorities):
+        sum_tree[i] = p
+        min_tree[i] = p
+
+    # debug and print tree contents
+    print("sum_tree:", sum_tree.tree) # sum_tree: [0.0, 1.0, 0.4, 0.6000000000000001, 0.1, 0.3, 0.2, 0.4]
+    print("min_tree:", min_tree.tree) #  min_tree: [inf, 0.1, 0.1, 0.2, 0.1, 0.3, 0.2, 0.4]
+    # yes, i = 0 is supposed to be default value as root is i = 1
+
+    print("total sum:", sum_tree.apply_sum()) # total sum: 1.0
+    print("total min:", min_tree.apply_min()) # total min: 0.1
+    print("left sum:", sum_tree.apply_sum(0,2)) # left sum: 0.4 (we dont include idx = 2)
+
+    # update
+    sum_tree[2] = 0.9 # update the 3rd leaf from the right
+    print("updated sum tree:", sum_tree.tree)
+    # updated sum tree: [0.0, 1.7000000000000002, 0.4, 1.3, 0.1, 0.3, 0.9, 0.4]
+    #  we see i = 6 (updated leaf) : 0.2 -> 0.9, so added +0.7
+    #         i = 3 (right parent), 0.6 + 0.7 = 1.3
+    #         i = 1 (grandparent), 1.0 + 0.7 = 1.7
+    print("updated new sum:", sum_tree.apply_sum()) # 1.7000000000000002
