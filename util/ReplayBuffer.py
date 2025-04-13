@@ -46,7 +46,7 @@ class ReplayBuffer:
         returns:
             dict with keys: (obs, next_obs, acts, rews, done)
         """
-        if self.size < self.batch_size:
+        if self.size < self.batch_size: # buffer is not yet filled, sample with replacement
             idxs = np.random.choice(self.size, size=self.batch_size, replace=True)
         else:
             idxs = np.random.choice(self.size, size=self.batch_size, replace=False)
