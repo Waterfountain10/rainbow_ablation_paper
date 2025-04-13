@@ -99,6 +99,10 @@ class SumTree(SegmentTree):
 
 
 class MinTree(SegmentTree):
+    '''This tree is ONLY used for calculate_IS_weights because it helps find max_weight through min_priority.
+        When trying to find priority_tree[idx], ONLY refer to SUM_TREE instead, not this one!
+    '''
+
     def __init__(self, capacity):
         super().__init__(capacity = capacity, function = min)
         for _ in range(2 * self.capacity): # initialize tree with float(inf)
