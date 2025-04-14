@@ -164,8 +164,11 @@ class DQN:
 
             while not done:
                 action, next_state, reward, done = self.step(state)
-                if len(self.memory) >= self.batch_size: # only update, once batch has enough samples
-                    loss = self.update_model() # we dont need loss really unless we want to debug
+
+                # only update if batch has enough samples
+                if len(self.memory) >= self.batch_size:
+                    loss = self.update_model()
+
                 state = next_state
                 ep_reward += reward
                 steps_n += 1

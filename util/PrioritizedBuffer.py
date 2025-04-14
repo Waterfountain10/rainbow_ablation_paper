@@ -78,10 +78,11 @@ class PrioritizedReplayBuffer(ReplayBuffer):
             - stores new priority in both trees AND shifts tree_pointer
             - updates buffer like regular ReplayBuffer
         '''
+        idx = self.curr_ind
         super().store(state, action, reward, next_state, done) # store exp. + move buffer_idx
         new_priority = (self.max_priority + self.td_epsilon) ** self.omega # epsilon clears edge case: if priority -> 0
-        self.sum_priority_tree[self.tree_pointer] = new_priority
-        self.min_priority_tree[self.tree_pointer] = new_priority
+        self.sum_priority_tree[idx] = new_priority
+        self.min_priority_tree[idx] = new_priority
         self.tree_pointer = (self.tree_pointer + 1) % self.max_size # if at end, go back to start (like curr_ind with buffer)
 
     def calculate_IS_weights(self, idx, beta):
@@ -95,11 +96,11 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         assert beta > 0
 
         priority_i = self.sum_priority_tree[idx]
-        probability_i = priority_i / self.sum_priority_tree.apply_sum()
+        probability_i = max(priority_i / self.sum_priority_tree.apply_sum(), 1e-10) # ensures no div by 0
         w_i = (1/len(self) * 1/probability_i) ** beta
 
         min_priority = self.min_priority_tree.apply_min()
-        min_probability = min_priority / self.sum_priority_tree.apply_sum()
+        min_probability = max(min_priority / self.sum_priority_tree.apply_sum(), 1e-10) # ensures not div by 0
         max_weight = (1/len(self) * 1/min_probability) ** beta
 
         return w_i / max_weight # return normalized weight
@@ -134,6 +135,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
             b = segment_mass * (i+1)
             upperbound = np.random.uniform(a,b)
             idx = self.sum_priority_tree.retrieve(upperbound)
+            idx = idx % self.max_size
             idxs.append(idx)
 
         weights = []

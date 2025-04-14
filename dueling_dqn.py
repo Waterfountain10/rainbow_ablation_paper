@@ -11,15 +11,18 @@ import gym_anytrading
 from gym_anytrading.datasets import FOREX_EURUSD_1H_ASK, STOCKS_GOOGL
 
 from util.NeuralNet import NeuralNet
+from util.DuelNet import DuelNet
 from util.PrioritizedBuffer import PrioritizedReplayBuffer
 import torch.nn.functional as F
 from tqdm import tqdm
 from util.running_mean import running_mean
 from dqn import DQN
+from torch.nn.utils import clip_grad_norm_
 
 
 
-class PrioritizedDQN(DQN):
+class DuelingDQN(DQN):
+    '''This DQN actually is built on top of our prioritized_dqn, since the effect of duel network is best seen with PER.'''
     def __init__(
         self,
         env: gym.Env,
@@ -38,7 +41,7 @@ class PrioritizedDQN(DQN):
     ):
         super().__init__(env,mem_size,batch_size,target_update_freq,epsilon_decay,max_epsilon,min_epsilon,gamma, alpha)
 
-        # override buffer (or memory in this case)
+        # override buffer (or memory in this case) <- PER
         self.omega = omega
         self.beta = beta
         self.td_epsilon = td_epsilon
@@ -46,18 +49,27 @@ class PrioritizedDQN(DQN):
         assert(self.obs_shape is not None)
         self.memory = PrioritizedReplayBuffer(self.obs_shape, mem_size, batch_size, omega, beta, td_epsilon)
 
+        # override network <--- Dueling Network
+        self.dqn_network = DuelNet(self.obs_shape, int(self.action_dim)).to(self.device)
+        self.dqn_target = DuelNet(self.obs_shape, int(self.action_dim)).to(self.device)
+        self.dqn_target.load_state_dict(self.dqn_network.state_dict())
+        self.dqn_target.train(False)
+        self.optimizer = torch.optim.Adam(self.dqn_network.parameters(), lr=alpha)
+
     def select_action(self, obs: np.ndarray) -> np.ndarray:
-        '''Same select_action() as pure DQN, using epsilon-greedy'''
+        '''Same as PER'''
         return super().select_action(obs)
 
     def step(self, state: np.ndarray) -> Tuple[np.ndarray, np.float64, bool]:
-        ''' Same as in pure DQN, but implicitly, memory stores differently under the hood'''
+        ''' Same as PER'''
         return super().step(state)
 
     def update_model(self) -> torch.TensorType:
         '''
-        Different from pure DQN, sampling buffer outputs weights and idxs,
-        and loss is now calculated with weights. Also, need to update priorities, once
+        Same thing as PER, but since we are dealing with two streams, gradients might become larger or more volatile than just with one stream.
+        Many authors like in rainbow's paper, suggests clipping rewards.
+
+        Thus, we clip gradients to be max 10.
         '''
         samples = self.memory.sample_batch() # sample = dict with many keys
         losses = self._compute_dqn_loss(samples) # torch.Tensor
@@ -68,6 +80,7 @@ class PrioritizedDQN(DQN):
 
         self.optimizer.zero_grad()
         weighted_loss.backward()
+        clip_grad_norm_(self.dqn_network.parameters(), 10.0) # clip grads
         self.optimizer.step()
 
         # update priorities given our index array
@@ -111,7 +124,7 @@ class PrioritizedDQN(DQN):
         rewards = []
         beta_start = self.beta
         BETA_END = 1.0
-        total_max_steps = num_episodes * 200 # average
+        total_max_steps = num_episodes * 200 # an estimate (it might take more than 200 steps, but this is average)
 
         if show_progress:
             episode_bar = tqdm(total=num_episodes, desc="Episodes", leave=False)
@@ -189,7 +202,7 @@ if __name__ == "__main__":
     env = gym.make("CartPole-v1")
     #env = gym.make('stocks-v0', frame_bound=(50, 100), window_size=50)
 
-    agent = PrioritizedDQN(
+    agent = DuelingDQN(
         env=env,
         mem_size=MEMORY_SIZE,
         batch_size=BATCH_SIZE,
@@ -223,7 +236,7 @@ if __name__ == "__main__":
 
     # also save png SAVE DID NOT WORK BTW
     os.makedirs("results", exist_ok=True)
-    plt.savefig("results/rewards_PrioritizedDQN.png")
-    print("Plot saved to results/rewards_PrioritizedDQN.png")
+    plt.savefig("results/rewards_DuelingDQN.png")
+    print("Plot saved to results/rewards_DuelingDQN.png")
 
     plt.show()
