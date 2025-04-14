@@ -77,30 +77,13 @@ class PrioritizedDQN(DQN):
         return weighted_loss.item()
 
     def _compute_dqn_loss(self, samples: Dict[str, np.ndarray]) -> torch.Tensor:
-        state = torch.FloatTensor(samples["obs"]).to(self.device)
-        next_state = torch.FloatTensor(samples["next_obs"]).to(self.device)
-        action = torch.LongTensor(samples["acts"]).unsqueeze(1).to(self.device)
-        reward = torch.FloatTensor(samples["rews"]).unsqueeze(1).to(self.device)
-        done = torch.FloatTensor(samples["done"]).unsqueeze(1).to(self.device)
-
-        # G_t = r + gamma * v(s_{t+1})
-        q_values = self.dqn_network(state)
-        q_current = q_values.gather(1, action)
-
-        with torch.no_grad():
-            q_next = self.dqn_target(next_state)
-            max_q_next = q_next.max(dim=1, keepdim=True)[0]
-            q_target = reward + self.gamma * max_q_next * (1 - done)
-
-        loss = F.smooth_l1_loss(q_current, q_target)
-        # loss = F.mse_loss(q_current, q_target)
-
-        return loss
+        return super()._compute_dqn_loss(samples)
 
     def _target_hard_update(self):
-        self.dqn_target.load_state_dict(self.dqn_network.state_dict())
+        super()._target_hard_update()
 
     def train(self, num_episodes, show_progress=True):
+        '''Same as pure DQN, but beta improves slightly after incrementing reward'''
         rewards = []
 
         if show_progress:
@@ -118,6 +101,14 @@ class PrioritizedDQN(DQN):
                 state = next_state
                 ep_reward += reward
                 steps_n += 1
+
+                # PER specific: annealed_beta := beta + x*beta where x is either %_steps_currenlty or 100%
+                fraction = min(self.total_steps / num_episodes, 1.0)
+                self.beta = self.beta + fraction * (1.0 - self.beta)
+
+            # update target network if needed
+            if episode % self.target_update_freq == 0:
+                self._target_hard_update()
 
             rewards.append(ep_reward)
             if show_progress:

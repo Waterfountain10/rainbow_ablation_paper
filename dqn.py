@@ -90,6 +90,7 @@ class DQN:
 
     def step(self, state: np.ndarray) -> Tuple[np.ndarray, np.float64, bool]:
         """
+        Go from current state -> next_state (and return everything related to this transition)
         Returns:
             action, next_state, reward, done
         """
@@ -135,6 +136,7 @@ class DQN:
         return loss
 
     def _target_hard_update(self):
+        '''Every target_update_freq steps, target_net <- copy(current_net)'''
         self.dqn_target.load_state_dict(self.dqn_network.state_dict())
 
     def train(self, num_episodes, show_progress=True):
@@ -156,6 +158,10 @@ class DQN:
                 ep_reward += reward
                 steps_n += 1
 
+            # update target network if needed
+            if episode % self.target_update_freq == 0:
+                        self._target_hard_update()
+
             rewards.append(ep_reward)
             if show_progress:
                 episode_bar.update(1)
@@ -165,6 +171,7 @@ class DQN:
             episode_bar.close()
         self.env.close()
         return rewards
+
 
     '''def plot(self):
         plt.figure(figsize=10,5)
