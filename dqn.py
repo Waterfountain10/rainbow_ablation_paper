@@ -4,15 +4,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import os
+
 import gymnasium as gym
 import gym_anytrading
 from gym_anytrading.datasets import FOREX_EURUSD_1H_ASK, STOCKS_GOOGL
+
 
 from util.NeuralNet import NeuralNet
 from util.ReplayBuffer import ReplayBuffer
 import torch.nn.functional as F
 from tqdm import tqdm
 from plot import running_mean
+import imageio # for testing recording agents
 
 
 class DQN:
@@ -115,6 +118,7 @@ class DQN:
         return loss.item()
 
     def _compute_dqn_loss(self, samples: Dict[str, np.ndarray]) -> torch.Tensor:
+
         state = torch.FloatTensor(samples["obs"]).to(self.device)
         next_state = torch.FloatTensor(samples["next_obs"]).to(self.device)
         action = torch.LongTensor(samples["acts"]).unsqueeze(1).to(self.device)
@@ -130,7 +134,7 @@ class DQN:
             max_q_next = q_next.max(dim=1, keepdim=True)[0]
             q_target = reward + self.gamma * max_q_next * (1 - done)
 
-        loss = F.smooth_l1_loss(q_current, q_target)
+        loss = F.smooth_l1_loss(q_current, q_target) # reduction="none" for prioritized BUFfer
         # loss = F.mse_loss(q_current, q_target)
 
         return loss
@@ -153,14 +157,15 @@ class DQN:
 
             while not done:
                 action, next_state, reward, done = self.step(state)
-                loss = self.update_model()
+                if len(self.memory) >= self.batch_size: # only update, once batch has enough samples
+                    loss = self.update_model() # we dont need loss really unless we want to debug
                 state = next_state
                 ep_reward += reward
                 steps_n += 1
 
             # update target network if needed
             if episode % self.target_update_freq == 0:
-                        self._target_hard_update()
+                self._target_hard_update()
 
             rewards.append(ep_reward)
             if show_progress:
@@ -195,6 +200,7 @@ class DQN:
         print("Plot saved to results/rewards.png")
         '''
 
+
 if __name__ == "__main__":
     # Parameters for DQN
     MEMORY_SIZE = 10000
@@ -204,13 +210,7 @@ if __name__ == "__main__":
     LEARNING_RATE = 1e-4
     NUM_EPISODES = 300  # Small number for testing
 
-    env = gym.make(
-        "forex-v0",
-        df=FOREX_EURUSD_1H_ASK,
-        window_size=10,
-        frame_bound=(10, int(0.25 * len(FOREX_EURUSD_1H_ASK))),
-        unit_side="right",
-    )
+    env = gym.make("CartPole-v1")
 
     agent = DQN(
         env=env,
@@ -238,10 +238,12 @@ if __name__ == "__main__":
     plt.ylabel("Total reward")
     plt.legend()
     plt.grid(True)
-    plt.tight_layout
-    plt.show()
+    plt.tight_layout()
+    #plt.show()
 
     # also save png SAVE DID NOT WORK BTW
     os.makedirs("results", exist_ok=True)
     plt.savefig("results/rewards_DQN.png")
     print("Plot saved to results/rewards.png")
+
+    plt.show()

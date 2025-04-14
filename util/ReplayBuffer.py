@@ -60,4 +60,4 @@ class ReplayBuffer:
         })
 
     def __len__(self) -> int:
-        return self.size
+        return min(self.size, self.max_size)

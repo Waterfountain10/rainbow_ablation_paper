@@ -3,6 +3,7 @@ from matplotlib.axis import Ticker
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+import os
 
 import gymnasium as gym
 import gym_anytrading
@@ -67,17 +68,38 @@ class PrioritizedDQN(DQN):
         weighted_loss.backward()
         self.optimizer.step()
 
-        # update priorities with indeces array
+        # update priorities given our index array
         idxs = samples["idxs"] # simple array type
         td_tensor = losses.detach().cpu().numpy() # untrack the gradients since this is not used for loss calculation but just priority tracking
         td_tensor = td_tensor.squeeze()
-        new_priorities = abs(td_tensor + self.td_epsilon) # p_i = |delta_i| + epsilon
+
+        new_priorities = np.atleast_1d(abs(td_tensor + self.td_epsilon)) # p_i = |delta_i| + epsilon
+        idxs = np.array(idxs)
         self.memory.update_priorities(idxs, new_priorities) # updates in buffer with : p_i ^ omega
 
         return weighted_loss.item()
 
     def _compute_dqn_loss(self, samples: Dict[str, np.ndarray]) -> torch.Tensor:
-        return super()._compute_dqn_loss(samples)
+        '''Same thing as pure dqn, but loss is calculated without reduction since we want to perform a torch.mean(widht * loss) later.'''
+        state = torch.FloatTensor(samples["obs"]).to(self.device)
+        next_state = torch.FloatTensor(samples["next_obs"]).to(self.device)
+        action = torch.LongTensor(samples["acts"]).unsqueeze(1).to(self.device)
+        reward = torch.FloatTensor(samples["rews"]).unsqueeze(1).to(self.device)
+        done = torch.FloatTensor(samples["done"]).unsqueeze(1).to(self.device)
+
+        # G_t = r + gamma * v(s_{t+1})
+        q_values = self.dqn_network(state)
+        q_current = q_values.gather(1, action)
+
+        with torch.no_grad():
+            q_next = self.dqn_target(next_state)
+            max_q_next = q_next.max(dim=1, keepdim=True)[0]
+            q_target = reward + self.gamma * max_q_next * (1 - done)
+
+        loss = F.smooth_l1_loss(q_current, q_target, reduction="none")
+        # loss = F.mse_loss(q_current, q_target)
+
+        return loss
 
     def _target_hard_update(self):
         super()._target_hard_update()
@@ -97,7 +119,8 @@ class PrioritizedDQN(DQN):
 
             while not done:
                 action, next_state, reward, done = self.step(state)
-                loss = self.update_model()
+                if len(self.memory) >= self.batch_size: # only update, once batch has enough samples
+                    loss = self.update_model() # we dont need loss really unless we want to debug
                 state = next_state
                 ep_reward += reward
                 steps_n += 1
@@ -151,21 +174,18 @@ if __name__ == "__main__":
     LEARNING_RATE = 1e-4
     NUM_EPISODES = 300  # Small number for testing
 
-    env = gym.make(
-        "forex-v0",
-        df=FOREX_EURUSD_1H_ASK,
-        window_size=10,
-        frame_bound=(10, int(0.25 * len(FOREX_EURUSD_1H_ASK))),
-        unit_side="right",
-    )
+    env = gym.make("CartPole-v1")
 
-    agent = DQN(
+    agent = PrioritizedDQN(
         env=env,
         mem_size=MEMORY_SIZE,
         batch_size=BATCH_SIZE,
         target_update_freq=TARGET_UPDATE_FREQ,
         epsilon_decay=EPSILON_DECAY_STEPS,
         alpha=LEARNING_RATE,
+        omega= 0.6, # priority importance parameter
+        beta= 0.4,  # then gets increased more later
+        td_epsilon= 1e-6
     )
 
     rewards = agent.train(NUM_EPISODES)
@@ -185,9 +205,12 @@ if __name__ == "__main__":
     plt.ylabel("Total reward")
     plt.legend()
     plt.grid(True)
-    plt.tight_layout
-    plt.show()
+    plt.tight_layout()
+    #plt.show()
 
     # also save png SAVE DID NOT WORK BTW
-    plt.savefig("results/rewards_DQN.png")
-    print("Plot saved to results/rewards.png")
+    os.makedirs("results", exist_ok=True)
+    plt.savefig("results/rewards_PrioritizedDQN.png")
+    print("Plot saved to results/rewards_PrioritizedDQN.png")
+
+    plt.show()

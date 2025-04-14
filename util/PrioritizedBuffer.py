@@ -1,6 +1,6 @@
-from ReplayBuffer import ReplayBuffer, ReplayBufferReturn
+from util.ReplayBuffer import ReplayBuffer, ReplayBufferReturn
 from typing import Dict, Tuple, TypedDict, cast, List
-from SegmentTree import MinTree, SumTree
+from util.SegmentTree import MinTree, SumTree
 from dqn import DQN
 import numpy as np
 import gymnasium as gym
@@ -116,6 +116,8 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         Ex: imagine 4 transitions stored. Regular ReplayBuffer -> each i=0,...i=3 has 25% chance
             but with PER and priorities = [0.1,0.3,0.2,0.4] -> P(0)=10%, P(1)=30%, ... P(3)=40%
         '''
+        #print(len(self))
+        #print(self.batch_size)
         assert len(self) >= self.batch_size # if not, then were not even ready to sample, what are you doing here?
 
         # Idea: Stratified sampling https://en.wikipedia.org/wiki/Stratified_sampling
@@ -151,18 +153,17 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         })
 
     def __len__(self) -> int:
-        return self.size
+        return min(self.size, self.max_size)
 
-    def update_priorities(self, idx, priorities: np.ndarray):
+    def update_priorities(self, idxs, new_priorities: np.ndarray):
         '''Given a list of idx with its associated properties, update buffer.
-            Note: MUST do abs(priority) before calling this function.
-                  No need for epsilon pre-call (taken care here)
+            Note: MUST do abs(priority) + epsilon before calling this function.
         '''
-        assert len(idx) == len(priorities) # ensures we have a valid 1 to 1 matching
-        for i, p in zip(idx, priorities):
+        assert len(idxs) == new_priorities.size # ensures we have a valid 1 to 1 matching
+        for i, p in zip(idxs, new_priorities):
             self.max_priority = max(p, self.max_priority) # update max
-            self.sum_priority_tree[i] = (p + self.td_epsilon) ** self.omega
-            self.min_priority_tree[i] = (p + self.td_epsilon) ** self.omega
+            self.sum_priority_tree[i] = (p) ** self.omega
+            self.min_priority_tree[i] = (p) ** self.omega
 
 if __name__ == "__main__":
     # EXAMPLE Test run with Prioritized Buffer and DQN
