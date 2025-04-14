@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import os
+import random
 
 import gymnasium as gym
 import gym_anytrading
@@ -167,12 +168,16 @@ class PrioritizedDQN(DQN):
 
 if __name__ == "__main__":
     # Parameters for DQN
-    MEMORY_SIZE = 10000
+    MEMORY_SIZE = 20000
     BATCH_SIZE = 64
-    TARGET_UPDATE_FREQ = 10
-    EPSILON_DECAY_STEPS = 700
-    LEARNING_RATE = 1e-4
-    NUM_EPISODES = 300  # Small number for testing
+    TARGET_UPDATE_FREQ = 100
+    EPSILON_DECAY_STEPS = 1500
+    LEARNING_RATE = 5e-4
+    NUM_EPISODES = 2000  # Small number for testing (increased it to compare with PER - will)
+    SEED = 42
+    np.random.seed(SEED)
+    random.seed(SEED)
+    torch.manual_seed(SEED)
 
     env = gym.make("CartPole-v1")
 
@@ -183,7 +188,7 @@ if __name__ == "__main__":
         target_update_freq=TARGET_UPDATE_FREQ,
         epsilon_decay=EPSILON_DECAY_STEPS,
         alpha=LEARNING_RATE,
-        omega= 0.6, # priority importance parameter
+        omega= 0.5, # priority importance parameter
         beta= 0.4,  # then gets increased more later
         td_epsilon= 1e-6
     )
