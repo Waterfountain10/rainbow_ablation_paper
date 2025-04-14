@@ -179,7 +179,8 @@ if __name__ == "__main__":
     random.seed(SEED)
     torch.manual_seed(SEED)
 
-    env = gym.make("CartPole-v1")
+    #env = gym.make("CartPole-v1")
+    env = gym.make('stocks-v0', frame_bound=(50, 100), window_size=50)
 
     agent = PrioritizedDQN(
         env=env,
