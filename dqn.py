@@ -1,5 +1,4 @@
 from typing import Dict, Tuple
-from matplotlib.axis import Ticker
 import numpy as np
 import torch
 
@@ -7,11 +6,15 @@ import gymnasium as gym
 import gym_anytrading
 from gym_anytrading.datasets import FOREX_EURUSD_1H_ASK, STOCKS_GOOGL
 
-from util.NeuralNet import NeuralNet
-from util.ReplayBuffer import ReplayBuffer, ReplayBufferReturn
 import torch.nn.functional as F
 from tqdm import tqdm
-from numbers import Number
+
+import ale_py
+
+gym.register_envs(ale_py)
+
+from util.NeuralNet import NeuralNet
+from util.ReplayBuffer import ReplayBuffer, ReplayBufferReturn
 
 
 class DQN:
@@ -34,7 +37,7 @@ class DQN:
         #     storage=storage, batch_size=batch_size
         # )  # TODO: could add prefetch (multithreaded thing)
         self.obs_shape = env.observation_space.shape
-        assert(self.obs_shape is not None)
+        assert self.obs_shape is not None
         self.memory = ReplayBuffer(self.obs_shape, mem_size, batch_size=batch_size)
         self.gamma = gamma
         self.epsilon = max_epsilon
@@ -58,8 +61,12 @@ class DQN:
         # if torch.mps.is_available():
         #     self.device = "mps"
 
-        self.dqn_network = NeuralNet(self.obs_shape, int(self.action_dim)).to(self.device)
-        self.dqn_target = NeuralNet(self.obs_shape, int(self.action_dim)).to(self.device)
+        self.dqn_network = NeuralNet(self.obs_shape, int(self.action_dim)).to(
+            self.device
+        )
+        self.dqn_target = NeuralNet(self.obs_shape, int(self.action_dim)).to(
+            self.device
+        )
         # make identical copies of the neural net
         self.dqn_target.load_state_dict(self.dqn_network.state_dict())
 
@@ -84,7 +91,9 @@ class DQN:
                 q_vaues = self.dqn_network(obs_tensor)
             return q_vaues.argmax().item()
 
-    def step(self, state: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.float32, bool]:
+    def step(
+        self, state: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray, np.float32, bool]:
         """
         Returns:
             action, next_state, reward, done
@@ -110,7 +119,9 @@ class DQN:
 
         return loss.item()
 
-    def _compute_dqn_loss(self, samples: Dict[str, np.ndarray]|ReplayBufferReturn) -> torch.Tensor:
+    def _compute_dqn_loss(
+        self, samples: Dict[str, np.ndarray] | ReplayBufferReturn
+    ) -> torch.Tensor:
         state = torch.FloatTensor(samples["obs"]).to(self.device)
         next_state = torch.FloatTensor(samples["next_obs"]).to(self.device)
         action = torch.LongTensor(samples["acts"]).unsqueeze(1).to(self.device)
@@ -132,38 +143,43 @@ class DQN:
         return loss
 
     def _target_hard_update(self):
+        # print("target update called")
         self.dqn_target.load_state_dict(self.dqn_network.state_dict())
 
     def train(self, num_episodes, show_progress=True):
-            rewards = []
-            episode_bar = None
+        rewards = []
+        episode_bar = None
 
-            if show_progress:
-                episode_bar = tqdm(total=num_episodes, desc="Episodes", leave=False)
+        if show_progress:
+            episode_bar = tqdm(total=num_episodes, desc="Episodes", leave=False)
 
-            for episode in range(num_episodes):
-                state, _ = self.env.reset()
-                done = False
-                ep_reward = 0
-                steps_n = 0
+        for episode in range(num_episodes):
+            state, _ = self.env.reset()
+            done = False
+            ep_reward = 0
+            steps_n = 0
 
-                while not done:
-                    action, next_state, reward, done = self.step(state)
-                    # Store loss for potential future metrics tracking
-                    training_loss = self.update_model()
-                    state = next_state
-                    ep_reward += reward
-                    steps_n += 1
+            while not done:
+                _, next_state, reward, done = self.step(state)
+                # Store loss for potential future metrics tracking
+                self.update_model()
 
-                rewards.append(ep_reward)
-                if show_progress and episode_bar is not None:
-                    episode_bar.update(1)
-                    episode_bar.set_postfix(reward=f"{ep_reward:.1f}", steps=steps_n)
+                if (steps_n % self.target_update_freq == 0):
+                    self._target_hard_update()
 
+                state = next_state
+                ep_reward += reward
+                steps_n += 1
+
+            rewards.append(ep_reward)
             if show_progress and episode_bar is not None:
-                episode_bar.close()
-            self.env.close()
-            return rewards
+                episode_bar.update(1)
+                episode_bar.set_postfix(reward=f"{ep_reward:.1f}", steps=steps_n)
+
+        if show_progress and episode_bar is not None:
+            episode_bar.close()
+        self.env.close()
+        return rewards
 
     def plot(self):
         pass
@@ -173,18 +189,22 @@ if __name__ == "__main__":
     # Parameters for DQN
     MEMORY_SIZE = 10000
     BATCH_SIZE = 64
-    TARGET_UPDATE_FREQ = 10
-    EPSILON_DECAY_STEPS = 700
+    TARGET_UPDATE_FREQ = 10000
+    EPSILON_DECAY_STEPS = 100000
     LEARNING_RATE = 1e-4
-    NUM_EPISODES = 300  # Small number for testing
+    NUM_EPISODES = 100  # Small number for testing
+    MIN_EPSILON = 0.05
 
-    env = gym.make(
-        "forex-v0",
-        df=FOREX_EURUSD_1H_ASK,
-        window_size=10,
-        frame_bound=(10, int(0.25 * len(FOREX_EURUSD_1H_ASK))),
-        unit_side="right",
-    )
+    # env = gym.make(
+    #     "forex-v0",
+    #     df=FOREX_EURUSD_1H_ASK,
+    #     window_size=10,
+    #     frame_bound=(10, int(0.25 * len(FOREX_EURUSD_1H_ASK))),
+    #     unit_side="right",
+    # )
+
+    gym.register_envs(ale_py)
+    env = gym.make("ALE/Assault-ram-v5", render_mode=None, max_episode_steps=1000)
 
     agent = DQN(
         env=env,
@@ -193,6 +213,7 @@ if __name__ == "__main__":
         target_update_freq=TARGET_UPDATE_FREQ,
         epsilon_decay=EPSILON_DECAY_STEPS,
         alpha=LEARNING_RATE,
+        min_epsilon=MIN_EPSILON
     )
 
     rewards = agent.train(NUM_EPISODES)
