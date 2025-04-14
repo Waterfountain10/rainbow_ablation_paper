@@ -1,7 +1,10 @@
 from typing import Dict, Tuple
 from matplotlib.axis import Ticker
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
+import os
+import random
 
 import gymnasium as gym
 import gym_anytrading
@@ -11,7 +14,10 @@ from util.NeuralNet import NeuralNet
 from util.ReplayBuffer import ReplayBuffer, ReplayBufferReturn
 import torch.nn.functional as F
 from tqdm import tqdm
+
 from numbers import Number
+from plot import running_mean
+import imageio # for testing recording agents
 
 
 class DQN:
@@ -33,6 +39,13 @@ class DQN:
         # self.buffer = TensorDictReplayBuffer(
         #     storage=storage, batch_size=batch_size
         # )  # TODO: could add prefetch (multithreaded thing)
+        #    # TODO: could also add self.transition = list() to seperate storing transition into 2 steps
+        #            self.transition = [state, action]  # in select_action()
+        #            self.transition += [reward, next_state, done] # in step()
+        #            self.memory.store(*self.transition)  # in step()
+        #    this temporarily caches s and a, for other processes to work with in multiprocessing!
+
+
         self.obs_shape = env.observation_space.shape
         assert(self.obs_shape is not None)
         self.memory = ReplayBuffer(self.obs_shape, mem_size, batch_size=batch_size)
@@ -86,6 +99,7 @@ class DQN:
 
     def step(self, state: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.float32, bool]:
         """
+        Go from current state -> next_state (and return everything related to this transition)
         Returns:
             action, next_state, reward, done
         """
@@ -110,7 +124,8 @@ class DQN:
 
         return loss.item()
 
-    def _compute_dqn_loss(self, samples: Dict[str, np.ndarray]|ReplayBufferReturn) -> torch.Tensor:
+
+    def _compute_dqn_loss(self, samples: Dict[str, np.ndarray]) -> torch.Tensor:
         state = torch.FloatTensor(samples["obs"]).to(self.device)
         next_state = torch.FloatTensor(samples["next_obs"]).to(self.device)
         action = torch.LongTensor(samples["acts"]).unsqueeze(1).to(self.device)
@@ -126,65 +141,87 @@ class DQN:
             max_q_next = q_next.max(dim=1, keepdim=True)[0]
             q_target = reward + self.gamma * max_q_next * (1 - done)
 
-        loss = F.smooth_l1_loss(q_current, q_target)
+        loss = F.smooth_l1_loss(q_current, q_target) # reduction="none" for prioritized BUFfer
         # loss = F.mse_loss(q_current, q_target)
 
         return loss
 
     def _target_hard_update(self):
+        '''Every target_update_freq steps, target_net <- copy(current_net)'''
         self.dqn_target.load_state_dict(self.dqn_network.state_dict())
 
     def train(self, num_episodes, show_progress=True):
-            rewards = []
-            episode_bar = None
+        rewards = []
 
-            if show_progress:
-                episode_bar = tqdm(total=num_episodes, desc="Episodes", leave=False)
+        if show_progress:
+            episode_bar = tqdm(total=num_episodes, desc="Episodes", leave=False)
 
-            for episode in range(num_episodes):
-                state, _ = self.env.reset()
-                done = False
-                ep_reward = 0
-                steps_n = 0
+        for episode in range(num_episodes):
+            state, _ = self.env.reset()
+            done = False
+            ep_reward = 0
+            steps_n = 0
 
-                while not done:
-                    action, next_state, reward, done = self.step(state)
-                    # Store loss for potential future metrics tracking
-                    training_loss = self.update_model()
-                    state = next_state
-                    ep_reward += reward
-                    steps_n += 1
+            while not done:
+                action, next_state, reward, done = self.step(state)
+                if len(self.memory) >= self.batch_size: # only update, once batch has enough samples
+                    loss = self.update_model() # we dont need loss really unless we want to debug
+                state = next_state
+                ep_reward += reward
+                steps_n += 1
 
-                rewards.append(ep_reward)
-                if show_progress and episode_bar is not None:
-                    episode_bar.update(1)
-                    episode_bar.set_postfix(reward=f"{ep_reward:.1f}", steps=steps_n)
+            # update target network if needed
+            if episode % self.target_update_freq == 0:
+                self._target_hard_update()
 
+            rewards.append(ep_reward)
             if show_progress and episode_bar is not None:
-                episode_bar.close()
-            self.env.close()
-            return rewards
+                episode_bar.update(1)
+                episode_bar.set_postfix(reward=f"{ep_reward:.1f}", steps=steps_n)
 
-    def plot(self):
-        pass
+        if show_progress and episode_bar is not None:
+            episode_bar.close()
+        self.env.close()
+        return rewards
+
+
+    '''def plot(self):
+        plt.figure(figsize=10,5)
+        plt.plot(rewards, label="episode Reward", alpha=0.6)
+
+        if len(rewards) >= 10: # apply cumsum sliding mean
+            smoothed = running_mean(rewards, window_size =10)
+            plt.plot(
+                range(10 - 1, len(rewards)), smoothed, label="smoothed window 10", linewidth=2
+            )
+        plt.title("DQN training rewards")
+        plt.xlabel("Episode")
+        plt.ylabel("Total reward")
+        plt.legend()
+        plt.grid(True)
+        plt.tight_layout
+        plt.show()
+
+        # also save png
+        plt.savefig("results/rewards_DQN.png")
+        print("Plot saved to results/rewards.png")
+        '''
 
 
 if __name__ == "__main__":
     # Parameters for DQN
-    MEMORY_SIZE = 10000
+    MEMORY_SIZE = 20000
     BATCH_SIZE = 64
-    TARGET_UPDATE_FREQ = 10
-    EPSILON_DECAY_STEPS = 700
-    LEARNING_RATE = 1e-4
-    NUM_EPISODES = 300  # Small number for testing
+    TARGET_UPDATE_FREQ = 100
+    EPSILON_DECAY_STEPS = 1500
+    LEARNING_RATE = 5e-4
+    NUM_EPISODES = 2000  # Small number for testing (increased it to compare with PER - will)
+    SEED = 42
+    np.random.seed(SEED)
+    random.seed(SEED)
+    torch.manual_seed(SEED)
 
-    env = gym.make(
-        "forex-v0",
-        df=FOREX_EURUSD_1H_ASK,
-        window_size=10,
-        frame_bound=(10, int(0.25 * len(FOREX_EURUSD_1H_ASK))),
-        unit_side="right",
-    )
+    env = gym.make("CartPole-v1")
 
     agent = DQN(
         env=env,
@@ -196,4 +233,28 @@ if __name__ == "__main__":
     )
 
     rewards = agent.train(NUM_EPISODES)
-    print(np.mean(rewards))
+    #print("Rewards at end:", np.mean(rewards))
+
+    # PLOT GRAPH AND SAVE IT
+    plt.figure(figsize=(10,5))
+    plt.plot(rewards, label="episode Reward", alpha=0.6)
+
+    if len(rewards) >= 10: # apply cumsum sliding mean
+        smoothed = running_mean(rewards, window_size =10)
+        plt.plot(
+            range(10 - 1, len(rewards)), smoothed, label="smoothed window 10", linewidth=2
+        )
+    plt.title("DQN training rewards")
+    plt.xlabel("Episode")
+    plt.ylabel("Total reward")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    #plt.show()
+
+    # also save png SAVE DID NOT WORK BTW
+    os.makedirs("results", exist_ok=True)
+    plt.savefig("results/rewards_DQN.png")
+    print("Plot saved to results/rewards.png")
+
+    plt.show()
