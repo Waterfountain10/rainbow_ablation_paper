@@ -16,7 +16,7 @@ import torch.nn.functional as F
 from tqdm import tqdm
 
 from numbers import Number
-from plot import running_mean
+from util.running_mean import running_mean
 import imageio # for testing recording agents
 
 

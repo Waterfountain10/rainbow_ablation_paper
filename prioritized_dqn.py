@@ -14,7 +14,7 @@ from util.NeuralNet import NeuralNet
 from util.PrioritizedBuffer import PrioritizedReplayBuffer
 import torch.nn.functional as F
 from tqdm import tqdm
-from plot import running_mean
+from util.running_mean import running_mean
 from dqn import DQN
 
 
