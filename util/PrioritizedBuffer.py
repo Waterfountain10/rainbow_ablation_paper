@@ -3,7 +3,10 @@ from typing import Dict, Tuple, TypedDict, cast, List
 from SegmentTree import MinTree, SumTree
 from dqn import DQN
 import numpy as np
-import gym as gymnasium
+import gymnasium as gym
+import gym_anytrading
+from gym_anytrading.datasets import FOREX_EURUSD_1H_ASK, STOCKS_GOOGL
+
 
 # the idea is that you sample transitiions based on their prioritized probability : P(i)
 #
@@ -44,7 +47,7 @@ class PrioritizedReplayBufferReturn(TypedDict):
     idxs: np.ndarray # Important to use for update_priorities
 
 class PrioritizedReplayBuffer(ReplayBuffer):
-    def __init__(self, obs_shape: Tuple[int, ...], size: int, batch_size: int = 32, omega = 0.6):
+    def __init__(self, obs_shape: Tuple[int, ...], size: int, batch_size: int = 32, omega = 0.6, beta = 0.6, td_epsilon = 1e-6):
         super().__init__(obs_shape, size, batch_size)
         # Create 2 trees to track sum_priorities, and minimum_priority:
         tree_capacity = 1
@@ -52,9 +55,11 @@ class PrioritizedReplayBuffer(ReplayBuffer):
             tree_capacity *= 2
         self.sum_priority_tree = SumTree(tree_capacity)
         self.min_priority_tree = MinTree(tree_capacity)
-        self.omega = omega
         self.max_priority = 1.0 # initial max must be 1, then itll shift to 0.7 or wtv
         self.tree_pointer = 0
+
+        self.omega = omega
+        self.beta = beta
         self.td_epsilon = 1e-6 # same one in original PER paper (Schaul et al. 2015)
 
     def store(
@@ -68,6 +73,10 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         '''
         Same as regular replay buffer, but since we're adding a NEW transition, we add
         priority_t = MAX_PRIORITY, so that, later when sampling, that probability_t will have the HIGHEST prob"
+
+        Return: void, but...
+            - stores new priority in both trees AND shifts tree_pointer
+            - updates buffer like regular ReplayBuffer
         '''
         super().store(state, action, reward, next_state, done) # store exp. + move buffer_idx
         new_priority = (self.max_priority + self.td_epsilon) ** self.omega # epsilon clears edge case: if priority -> 0
@@ -97,7 +106,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
 
 
     # overrides regular uniform sample
-    def sample_batch(self, beta = 0.4) -> PrioritizedReplayBufferReturn:
+    def sample_batch(self) -> PrioritizedReplayBufferReturn:
         '''
         Same thing as before but with two additional output params.
         Also, rather than choosing transitions with uniform Prob, we retrieve with prioritized Prob.
@@ -127,7 +136,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
 
         weights = []
         for i in idxs:
-            weight = self.calculate_IS_weights(i, beta)
+            weight = self.calculate_IS_weights(i, self.beta)
             weights.append(weight)
         weights = np.array(weights)
 

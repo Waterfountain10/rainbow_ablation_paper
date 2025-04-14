@@ -3,19 +3,21 @@ from matplotlib.axis import Ticker
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import os
+
 import gymnasium as gym
 import gym_anytrading
 from gym_anytrading.datasets import FOREX_EURUSD_1H_ASK, STOCKS_GOOGL
 
 from util.NeuralNet import NeuralNet
-from util.ReplayBuffer import ReplayBuffer
+from util.PrioritizedBuffer import PrioritizedReplayBuffer
 import torch.nn.functional as F
 from tqdm import tqdm
 from plot import running_mean
+from dqn import DQN
 
 
-class DQN:
+
+class PrioritizedDQN(DQN):
     def __init__(
         self,
         env: gym.Env,
@@ -27,91 +29,52 @@ class DQN:
         min_epsilon: float = 0.1,
         gamma: float = 0.99,
         alpha: float = 1e-3,
+        # PER specific parameters:
+        omega : float = 0.6, # priority importance parameter
+        beta : float = 0.4,  # then gets increased more later
+        td_epsilon: float = 1e-6
     ):
-        """Init"""
-        self.env = env
-        # storage = LazyTensorStorage(max_size=mem_size)
-        # self.buffer = TensorDictReplayBuffer(
-        #     storage=storage, batch_size=batch_size
-        # )  # TODO: could add prefetch (multithreaded thing)
-        #    # TODO: could also add self.transition = list() to seperate storing transition into 2 steps
-        #            self.transition = [state, action]  # in select_action()
-        #            self.transition += [reward, next_state, done] # in step()
-        #            self.memory.store(*self.transition)  # in step()
-        #    this temporarily caches s and a, for other processes to work with in multiprocessing!
+        super().__init__(env,mem_size,batch_size,target_update_freq,epsilon_decay,max_epsilon,min_epsilon,gamma, alpha)
 
-
+        # override buffer (or memory in this case)
+        self.omega = omega
+        self.beta = beta
+        self.td_epsilon = td_epsilon
         self.obs_shape = env.observation_space.shape
-        self.memory = ReplayBuffer(self.obs_shape, mem_size, batch_size=batch_size)
-        self.gamma = gamma
-        self.epsilon = max_epsilon
-        self.epsilon_decay = epsilon_decay
-        self.max_epsilon = max_epsilon
-        self.min_epsilon = min_epsilon
-        self.epsilon_decay_rate = (
-            (max_epsilon - min_epsilon) / epsilon_decay if epsilon_decay > 0 else 0
-        )
-        # self.state_size = env.observation_space.shape[0]
-        self.action_dim = env.action_space.n
-
-        self.device = "cpu"
-
-        # comment/uncomment below to use cpu/gpu
-        # if torch.cuda.is_available():
-        #     self.device = "cuda"
-        # if torch.mps.is_available():
-        #     self.device = "mps"
-
-        self.dqn_network = NeuralNet(self.obs_shape, self.action_dim).to(self.device)
-        self.dqn_target = NeuralNet(self.obs_shape, self.action_dim).to(self.device)
-        # make identical copies of the neural net
-        self.dqn_target.load_state_dict(self.dqn_network.state_dict())
-
-        self.dqn_target.train(False)
-        self.optimizer = torch.optim.Adam(self.dqn_network.parameters(), lr=alpha)
-        self.batch_size = batch_size
-        self.testing = False
-        self.target_update_freq = target_update_freq
-        self.total_steps = 0
+        self.memory = PrioritizedReplayBuffer(self.obs_shape, mem_size, batch_size, omega, beta, td_epsilon)
 
     def select_action(self, obs: np.ndarray) -> np.ndarray:
-        if np.random.random() < self.epsilon:
-            return self.env.action_space.sample()
-        else:
-            obs_flat = obs.flatten()
-            obs_tensor = (
-                torch.as_tensor(obs_flat, dtype=torch.float32)
-                .unsqueeze(0)
-                .to(self.device)
-            )
-            with torch.no_grad():
-                q_vaues = self.dqn_network(obs_tensor)
-            return q_vaues.argmax().item()
+        '''Same select_action() as pure DQN, using epsilon-greedy'''
+        return super().select_action(obs)
 
     def step(self, state: np.ndarray) -> Tuple[np.ndarray, np.float64, bool]:
-        """
-        Returns:
-            action, next_state, reward, done
-        """
-        action = self.select_action(state)
-        next_state, reward, terminated, trucated, _ = self.env.step(action)
-        done = terminated or trucated
-
-        self.memory.store(state, action, reward, next_state, done)
-        self.total_steps += 1
-        self.epsilon = max(self.min_epsilon, self.epsilon - self.epsilon_decay_rate)
-
-        return action, next_state, reward, done
+        ''' Same as in pure DQN, but implicitly, memory stores differently under the hood'''
+        return super().step(state)
 
     def update_model(self) -> torch.TensorType:
-        samples = self.memory.sample_batch()
-        loss = self._compute_dqn_loss(samples)
+        '''
+        Different from pure DQN, sampling buffer outputs weights and idxs,
+        and loss is now calculated with weights. Also, need to update priorities, once
+        '''
+        samples = self.memory.sample_batch() # sample = dict with many keys
+        losses = self._compute_dqn_loss(samples) # torch.Tensor
+
+        # calculate weighted loss rather than simple loss
+        weights = torch.FloatTensor(samples["weights"].reshape(-1,1)).to(self.device)
+        weighted_loss = torch.mean(losses * weights)
 
         self.optimizer.zero_grad()
-        loss.backward()
+        weighted_loss.backward()
         self.optimizer.step()
 
-        return loss.item()
+        # update priorities with indeces array
+        idxs = samples["idxs"] # simple array type
+        td_tensor = losses.detach().cpu().numpy() # untrack the gradients since this is not used for loss calculation but just priority tracking
+        td_tensor = td_tensor.squeeze()
+        new_priorities = abs(td_tensor + self.td_epsilon) # p_i = |delta_i| + epsilon
+        self.memory.update_priorities(idxs, new_priorities) # updates in buffer with : p_i ^ omega
+
+        return weighted_loss.item()
 
     def _compute_dqn_loss(self, samples: Dict[str, np.ndarray]) -> torch.Tensor:
         state = torch.FloatTensor(samples["obs"]).to(self.device)
@@ -235,6 +198,5 @@ if __name__ == "__main__":
     plt.show()
 
     # also save png SAVE DID NOT WORK BTW
-    os.makedirs("results", exist_ok=True)
     plt.savefig("results/rewards_DQN.png")
     print("Plot saved to results/rewards.png")
