@@ -1,13 +1,5 @@
-from typing import Tuple, TypedDict, cast
+from typing import Dict, Tuple
 import numpy as np
-
-
-class ReplayBufferReturn(TypedDict):
-    obs: np.ndarray
-    next_obs: np.ndarray
-    acts: np.ndarray
-    rews: np.ndarray
-    done: np.ndarray
 
 
 class ReplayBuffer:
@@ -38,26 +30,32 @@ class ReplayBuffer:
         self.rewards_buf[self.curr_ind] = reward
         self.done_buf[self.curr_ind] = done
 
-        self.curr_ind = (self.curr_ind + 1) % self.max_size # if at end, go back to start and replace the oldest experiences
-        self.size = min(self.size + 1, self.max_size) # buffer size increase (capped at max_size) -> replace oldest back in start
+        self.curr_ind = (
+            (self.curr_ind + 1) % self.max_size
+        )  # if at end, go back to start and replace the oldest experiences
+        self.size = min(
+            self.size + 1, self.max_size
+        )  # buffer size increase (capped at max_size) -> replace oldest back in start
 
-    def sample_batch(self) -> ReplayBufferReturn:
+    def sample_batch(self) -> Dict[str, np.ndarray]:
         """
         returns:
             dict with keys: (obs, next_obs, acts, rews, done)
         """
-        if self.size < self.batch_size: # buffer is not yet filled, sample with replacement
+        if (
+            self.size < self.batch_size
+        ):  # buffer is not yet filled, sample with replacement
             idxs = np.random.choice(self.size, size=self.batch_size, replace=True)
         else:
             idxs = np.random.choice(self.size, size=self.batch_size, replace=False)
 
-        return cast(ReplayBufferReturn, {
+        return {
             "obs": self.state_buf[idxs],
             "next_obs": self.next_state_buf[idxs],
-            "acts" :self.acts_buf[idxs],
-            "rews" : self.rewards_buf[idxs],
-            "done" : self.done_buf[idxs],
-        })
+            "acts": self.acts_buf[idxs],
+            "rews": self.rewards_buf[idxs],
+            "done": self.done_buf[idxs],
+        }
 
     def __len__(self) -> int:
         return min(self.size, self.max_size)
