@@ -22,4 +22,4 @@ class NeuralNet(nn.Module):
         x = torch.flatten(x, start_dim=1)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        return self.fc3(x)
+        return self.fc3(x) # Q(s,a) info

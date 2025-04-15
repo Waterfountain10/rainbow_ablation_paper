@@ -107,7 +107,7 @@ class NoisyLayer(nn.Module):
         sqrt_abs_x = x.abs().sqrt()
         return sign_x.mul(sqrt_abs_x)
 
-
+# NETWORK HER ------------------------------------------------------------------------------------------------------------------------------------------------
 class NoisyNet(nn.Module):
     '''Same thing as Regular Network, but we implement NoisyLayer() instead of regular Linear()
         This is essentially NeuralNet + NoisyLayers (i.e first is linear and 2 last layers are noisy)

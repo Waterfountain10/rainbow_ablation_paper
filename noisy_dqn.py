@@ -60,14 +60,14 @@ class NoisyDQN(DQN):
             raise ValueError("Action space must be discrete")
         self.device = "cpu"
 
-        # override NeuralNet with NoisyNet
+        # override NeuralNet with NoisyNet SPECIFIC STUFF
         assert(self.obs_shape is not None)
         self.dqn_network = NoisyNet(self.obs_shape, int(self.action_dim), sigma_init=sigma_init).to(self.device)
         self.dqn_target = NoisyNet(self.obs_shape, int(self.action_dim), sigma_init=sigma_init).to(self.device)
         self.dqn_target.load_state_dict(self.dqn_network.state_dict())
-
         self.dqn_target.train(False)
         self.optimizer = torch.optim.Adam(self.dqn_network.parameters(), lr=alpha)
+
         self.batch_size = batch_size
         self.testing = False
         self.target_update_freq = target_update_freq
@@ -101,6 +101,7 @@ class NoisyDQN(DQN):
         #self.epsilon = max(self.min_epsilon, self.epsilon - self.epsilon_decay_rate)
 
         return action, next_state, np.float32(reward), done
+
 
     def update_model(self) -> float:
         ''' Same as in pure DQN, but we create_epsilon (not greedy, but epsilon as in noise) to refresh noise'''

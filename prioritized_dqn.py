@@ -56,7 +56,7 @@ class PrioritizedDQN(DQN):
 
     def update_model(self) -> float:
         '''
-        Different from pure DQN, sampling buffer outputs weights and idxs,
+        Different from pure DQN, sampling buffer outputs 2 addtiional info : weights and idxs,
         and loss is now calculated with weights. Also, need to update priorities, once
         '''
         samples = self.memory.sample_batch() # sample = dict with many keys
@@ -98,7 +98,7 @@ class PrioritizedDQN(DQN):
             max_q_next = q_next.max(dim=1, keepdim=True)[0]
             q_target = reward + self.gamma * max_q_next * (1 - done)
 
-        loss = F.smooth_l1_loss(q_current, q_target, reduction="none")
+        loss = F.smooth_l1_loss(q_current, q_target, reduction="none") # could fix this whole bug in dqn so PER only needs to do super()
         # loss = F.mse_loss(q_current, q_target)
 
         return loss
@@ -111,7 +111,7 @@ class PrioritizedDQN(DQN):
         rewards = []
         beta_start = self.beta
         BETA_END = 1.0
-        total_max_steps = num_episodes * 200 # average
+        total_max_steps = num_episodes * 200 # approximative average
 
         if show_progress:
             episode_bar = tqdm(total=num_episodes, desc="Episodes", leave=False)
@@ -123,7 +123,7 @@ class PrioritizedDQN(DQN):
             steps_n = 0
 
             while not done:
-                action, next_state, reward, done = self.step(state)
+                action, next_state, reward, done = self.step(state) # increments self.total_step
 
                 # only update if batch has enough samples
                 if len(self.memory) >= self.batch_size:

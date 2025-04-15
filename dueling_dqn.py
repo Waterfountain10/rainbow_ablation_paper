@@ -26,6 +26,7 @@ class DuelingDQN(DQN):
     This DQN agent actually is built on top of our prioritized_dqn, since the effect of duel network is best seen with PER.
 
     (edited) on further notice, I think it might be smarter to use a regular buffer... im just too lazy to fix it.
+
     If you are seeing this Max, and want to change this back to regular buffer here are the main tweaks:
         - switch PrioritizedReplayBuffer in init,
         - update_model() :

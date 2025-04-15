@@ -11,7 +11,7 @@ from gym_anytrading.datasets import FOREX_EURUSD_1H_ASK, STOCKS_GOOGL
 # the idea is that you sample transitiions based on their prioritized probability : P(i)
 #
 #          (priority_i ) ^ omega
-# P(i) := ------------------------       where priority_i := |TD_i| + epsilon (keeping sampling where TD = 0)
+# Prob(i) := ------------------------       where priority_i := |TD_i| + epsilon (keeping sampling where TD = 0)
 #          sum_k(priority_k ^ omega)
 
 # Also, we might notice that this will cause a overfitting problem:
@@ -150,6 +150,8 @@ class PrioritizedReplayBuffer(ReplayBuffer):
             "acts" :self.acts_buf[idxs],
             "rews" : self.rewards_buf[idxs],
             "done" : self.done_buf[idxs],
+
+            # addtional params
             "weights" : np.array(weights),
             "idxs" : idxs,
         })
