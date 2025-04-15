@@ -162,9 +162,7 @@ class DQN:
             max_q_next = q_next.max(dim=1, keepdim=True)[0]
             q_target = reward + self.gamma * max_q_next * (1 - done)
 
-        loss = F.smooth_l1_loss(
-            q_current, q_target
-        )  # reduction="none" for prioritized BUFfer
+        loss = F.smooth_l1_loss(q_current, q_target)  # reduction="none" for prioritized BUFfer
         # loss = F.mse_loss(q_current, q_target)
 
         return loss

@@ -11,7 +11,7 @@ class DuelNet(nn.Module):
     DuelNet seperates the full stream into two parts: a shared feature layer, and a branch of 2 layers.
 
                                  ->  value_layer = V(s)
-    i.e. input -> (hidden layer)                          -> output -> Q(s,a) := V(s) + [A(s,a) - meanA(s,*)]
+    i.e. input -> (hidden layer)                          -> output -> Q(s,a) := V(s) + [A(s,a) - mean A(s,*)]
                                  ->  advantage = A(s,a)
 
     this is advantageous for environements where actions don't really have a correlatiion to value. they don't matter
