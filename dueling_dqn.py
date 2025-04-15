@@ -22,7 +22,19 @@ from torch.nn.utils import clip_grad_norm_
 
 
 class DuelingDQN(DQN):
-    '''This DQN actually is built on top of our prioritized_dqn, since the effect of duel network is best seen with PER.'''
+    '''
+    This DQN agent actually is built on top of our prioritized_dqn, since the effect of duel network is best seen with PER.
+
+    (edited) on further notice, I think it might be smarter to use a regular buffer... im just too lazy to fix it.
+    If you are seeing this Max, and want to change this back to regular buffer here are the main tweaks:
+        - switch PrioritizedReplayBuffer in init,
+        - update_model() :
+        - _compute_dqn_loss() : add reduction="none" for PER and remove it for dqn, but honestly there might be a wiser fix
+        - train() : annealed beta for PER
+    if its too much work you can ask me, or we can just leave it as is.
+    '''
+
+
     def __init__(
         self,
         env: gym.Env,

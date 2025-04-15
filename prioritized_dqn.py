@@ -50,7 +50,7 @@ class PrioritizedDQN(DQN):
         '''Same select_action() as pure DQN, using epsilon-greedy'''
         return super().select_action(obs)
 
-    def step(self, state: np.ndarray) -> Tuple[np.ndarray, np.float64, bool]:
+    def step(self, state: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.float32, bool]:
         ''' Same as in pure DQN, but implicitly, memory stores differently under the hood'''
         return super().step(state)
 
