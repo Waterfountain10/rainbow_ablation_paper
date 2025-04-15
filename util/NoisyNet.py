@@ -1,11 +1,8 @@
-from tkinter import Scale
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
 import numpy as np
-import math
-from test.test___future__ import features
-from statistics import mean
+from typing import Tuple
 
 class NoisyLayer(nn.Module):
     '''
@@ -110,5 +107,29 @@ class NoisyLayer(nn.Module):
         sqrt_abs_x = x.abs().sqrt()
         return sign_x.mul(sqrt_abs_x)
 
+
 class NoisyNet(nn.Module):
-    '''Same thing as Regular Network, but we implement NoisyLayer() instead of regular Linear()'''
+    '''Same thing as Regular Network, but we implement NoisyLayer() instead of regular Linear()
+        This is essentially NeuralNet + NoisyLayers (i.e first is linear and 2 last layers are noisy)
+
+            TO NOTE: rainbow authors also implemented DuelNet + NoisyLayers, which gave better results...
+                     thus, I added an implementation of how it would look like with DuelNet, under the code
+    '''
+    def __init__(self, input_dim: Tuple[int, ...], ouput_dim: int, hidden_dim=256):
+        super().__init__()
+        SIGMA_INIT = 0.5 # might change, but this is what authors used for rainbow paper
+        flat_input_dim = int(np.prod(input_dim))
+        self.fc1 = nn.Linear(flat_input_dim, hidden_dim)
+        self.fc2_noisy = NoisyLayer(hidden_dim, hidden_dim, SIGMA_INIT)
+        self.fc3_noisy = NoisyLayer(hidden_dim, ouput_dim, SIGMA_INIT)
+
+    def forward(self, x):
+        x = torch.flatten(x, start_dim=1)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2_noisy(x))
+        return self.fc3_noisy(x)
+
+    def reset_noise(self):
+        ''' Updates the epsilon after each step. Called inside agent's update_model() (usually right after optimizer.step()).'''
+        self.fc2_noisy.create_new_epsilon()
+        self.fc3_noisy.create_new_epsilon()
