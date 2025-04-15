@@ -6,6 +6,12 @@
 
 agents done implenting up until now:
 - dqn
-- ddqn (denis has to merge)
+- ddqn
 - prioritized
 - duel
+- noisy
+
+To Do:
+- categorical
+- n - step
+- rainbow
