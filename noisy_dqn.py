@@ -135,7 +135,7 @@ class NoisyDQN(DQN):
             max_q_next = q_next.max(dim=1, keepdim=True)[0]
             q_target = reward + self.gamma * max_q_next * (1 - done)
 
-        loss = F.smooth_l1_loss(q_current, q_target, reduction="none")
+        loss = F.smooth_l1_loss(q_current, q_target) # reduction="none" for PER only
         # loss = F.mse_loss(q_current, q_target)
 
         return loss
@@ -216,6 +216,7 @@ if __name__ == "__main__":
     np.random.seed(SEED)
     random.seed(SEED)
     torch.manual_seed(SEED)
+
     SIGMA_INIT = 0.5 # <---- NEW HYPERPARAM FOR NOISY NET
 
 
