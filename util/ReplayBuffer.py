@@ -23,7 +23,7 @@ class ReplayBuffer:
         reward: float,
         next_state: np.ndarray,
         done: bool,
-    ):
+    ) -> bool | None:
         self.state_buf[self.curr_ind] = state
         self.next_state_buf[self.curr_ind] = next_state
         self.acts_buf[self.curr_ind] = action
