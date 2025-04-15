@@ -18,6 +18,15 @@ from tqdm import tqdm
 from numbers import Number
 from util.running_mean import running_mean
 import imageio  # for testing recording agents
+import torch.nn.functional as F
+from tqdm import tqdm
+
+import ale_py
+
+gym.register_envs(ale_py)
+
+from util.NeuralNet import NeuralNet
+from util.ReplayBuffer import ReplayBuffer
 
 
 class DQN:
@@ -53,9 +62,15 @@ class DQN:
         self.epsilon_decay = epsilon_decay
         self.max_epsilon = max_epsilon
         self.min_epsilon = min_epsilon
+
+        # for linear
         self.epsilon_decay_rate = (
             (max_epsilon - min_epsilon) / epsilon_decay if epsilon_decay > 0 else 0
         )
+
+        # for exponential decay rate: max * (decayRate)^eps_decay = min
+        self.eps_exp_decay_rate = (min_epsilon / max_epsilon) ** (1.0 / epsilon_decay)
+
         # self.state_size = env.observation_space.shape[0]
         if isinstance(env.action_space, gym.spaces.Discrete):
             self.action_dim = env.action_space.n
@@ -85,6 +100,7 @@ class DQN:
         self.testing = False
         self.target_update_freq = target_update_freq
         self.total_steps = 0
+        self.updating_eps = True
 
     def select_action(self, obs: np.ndarray) -> np.ndarray:
         if np.random.random() < self.epsilon:
@@ -115,7 +131,17 @@ class DQN:
 
         self.memory.store(state, int(action), reward, next_state, done)
         self.total_steps += 1
-        self.epsilon = max(self.min_epsilon, self.epsilon - self.epsilon_decay_rate)
+
+        # linear decay
+        # self.epsilon = max(self.min_epsilon, self.epsilon - self.epsilon_decay_rate)
+
+        # exp decay
+        self.epsilon = max(self.min_epsilon, self.epsilon * self.eps_exp_decay_rate)
+        
+        
+        if self.epsilon == self.min_epsilon and self.updating_eps:
+            self.updating_eps = False
+            print("epsilon at minimum")
 
         return action, next_state, np.float32(reward), done
 
@@ -158,6 +184,7 @@ class DQN:
 
     def train(self, num_episodes, show_progress=True):
         rewards = []
+        steps_tot = 0
 
         episode_bar = None
         if show_progress:
@@ -176,20 +203,26 @@ class DQN:
                 if len(self.memory) >= self.batch_size:
                     loss = self.update_model()
 
-                if steps_n % self.target_update_freq:
+                if (steps_tot % self.target_update_freq == 0):
                     self._target_hard_update()
 
                 state = next_state
                 ep_reward += reward
                 steps_n += 1
+                steps_tot += 1
 
             # update target network if needed
-            self._target_hard_update()
+            # self._target_hard_update()
 
             rewards.append(ep_reward)
             if show_progress and episode_bar is not None:
                 episode_bar.update(1)
-                episode_bar.set_postfix(reward=f"{ep_reward:.1f}", steps=steps_n)
+                episode_bar.set_postfix(reward=f"{ep_reward:.1f}", steps=steps_n, epsilon=f"{self.epsilon:.2f}")
+
+        if show_progress and episode_bar is not None:
+            episode_bar.close()
+        self.env.close()
+        return rewards
 
         if show_progress and episode_bar is not None:
             episode_bar.close()
@@ -221,20 +254,40 @@ class DQN:
 
 if __name__ == "__main__":
     # Parameters for DQN
-    MEMORY_SIZE = 20000
-    BATCH_SIZE = 64
-    TARGET_UPDATE_FREQ = 100
-    EPSILON_DECAY_STEPS = 1500  # 100000 (I found to give better results - Denis)
-    LEARNING_RATE = 5e-4
-    NUM_EPISODES = (
-        2000  # Small number for testing (increased it to compare with PER - will)
-    )
+    # MEMORY_SIZE = 20000
+    # BATCH_SIZE = 64
+    # TARGET_UPDATE_FREQ = 100
+    # EPSILON_DECAY_STEPS = 1500  # used to be 1500
+    # LEARNING_RATE = 5e-4
+    # NUM_EPISODES = (
+    #     2000  # Small number for testing (increased it to compare with PER - will)
+    # )
     SEED = 42
     np.random.seed(SEED)
     random.seed(SEED)
     torch.manual_seed(SEED)
 
     env = gym.make("CartPole-v1")
+
+    #* Parameters I (denis) was using and found to produce better results
+    MEMORY_SIZE = 10000
+    BATCH_SIZE = 64
+    TARGET_UPDATE_FREQ = 30
+    EPSILON_DECAY_STEPS = 20000
+    LEARNING_RATE = 1e-3
+    NUM_EPISODES = 1000  # Small number for testing
+    MIN_EPSILON = 0.05
+
+    # env = gym.make(
+    #     "forex-v0",
+    #     df=FOREX_EURUSD_1H_ASK,
+    #     window_size=10,
+    #     frame_bound=(10, int(0.25 * len(FOREX_EURUSD_1H_ASK))),
+    #     unit_side="right",
+    # )
+
+    # gym.register_envs(ale_py)
+    # env = gym.make("ALE/Assault-ram-v5", render_mode=None, max_episode_steps=1000)
 
     agent = DQN(
         env=env,
@@ -243,6 +296,7 @@ if __name__ == "__main__":
         target_update_freq=TARGET_UPDATE_FREQ,
         epsilon_decay=EPSILON_DECAY_STEPS,
         alpha=LEARNING_RATE,
+        min_epsilon=MIN_EPSILON
     )
 
     rewards = agent.train(NUM_EPISODES)
@@ -262,15 +316,15 @@ if __name__ == "__main__":
         )
     plt.title("DQN training rewards")
     plt.xlabel("Episode")
-    plt.ylabel("Total reward")
+    plt.ylabel("Episode reward")
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
-    # plt.show()
+    plt.show()
 
     # also save png SAVE DID NOT WORK BTW
-    os.makedirs("results", exist_ok=True)
-    plt.savefig("results/rewards_DQN.png")
-    print("Plot saved to results/rewards.png")
+    # os.makedirs("results", exist_ok=True)
+    # plt.savefig("results/rewards_DQN.png")
+    # print("Plot saved to results/rewards.png")
 
     plt.show()
