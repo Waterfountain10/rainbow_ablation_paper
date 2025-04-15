@@ -115,13 +115,12 @@ class NoisyNet(nn.Module):
             TO NOTE: rainbow authors also implemented DuelNet + NoisyLayers, which gave better results...
                      thus, I added an implementation of how it would look like with DuelNet, under the code
     '''
-    def __init__(self, input_dim: Tuple[int, ...], ouput_dim: int, hidden_dim=256):
+    def __init__(self, input_dim: Tuple[int, ...], ouput_dim: int, hidden_dim=256, sigma_init = 0.5):
         super().__init__()
-        SIGMA_INIT = 0.5 # might change, but this is what authors used for rainbow paper
         flat_input_dim = int(np.prod(input_dim))
         self.fc1 = nn.Linear(flat_input_dim, hidden_dim)
-        self.fc2_noisy = NoisyLayer(hidden_dim, hidden_dim, SIGMA_INIT)
-        self.fc3_noisy = NoisyLayer(hidden_dim, ouput_dim, SIGMA_INIT)
+        self.fc2_noisy = NoisyLayer(hidden_dim, hidden_dim, sigma_init)
+        self.fc3_noisy = NoisyLayer(hidden_dim, ouput_dim, sigma_init)
 
     def forward(self, x):
         x = torch.flatten(x, start_dim=1)

@@ -10,8 +10,8 @@ import gymnasium as gym
 import gym_anytrading
 from gym_anytrading.datasets import FOREX_EURUSD_1H_ASK, STOCKS_GOOGL
 
-from util.NeuralNet import NeuralNet
-from util.PrioritizedBuffer import PrioritizedReplayBuffer
+from util.NoisyNet import NoisyNet
+from util.ReplayBuffer import ReplayBuffer
 import torch.nn.functional as F
 from tqdm import tqdm
 from util.running_mean import running_mean
@@ -32,31 +32,62 @@ class NoisyDQN(DQN):
         mem_size: int,
         batch_size: int,
         target_update_freq: int,
-        epsilon_decay: float,
-        max_epsilon: float = 1.0,
-        min_epsilon: float = 0.1,
+        #epsilon_decay: float,
+        #max_epsilon: float = 1.0,
+        #min_epsilon: float = 0.1,
         gamma: float = 0.99,
         alpha: float = 1e-3,
+        sigma_init: float = 0.5,
 
     ):
-        super().__init__(env,mem_size,batch_size,target_update_freq,epsilon_decay,max_epsilon,min_epsilon,gamma, alpha)
-        # even though we initialized some epsilon params, we are good as long as we dont use them below
+        ''' Same as DQN, except i commented out all epsilon-greedy related lines'''
+        self.env = env
+        self.obs_shape = env.observation_space.shape
+        assert(self.obs_shape is not None)
+        self.memory = ReplayBuffer(self.obs_shape, mem_size, batch_size=batch_size)
+        self.gamma = gamma
+        #self.epsilon = max_epsilon
+        #self.epsilon_decay = epsilon_decay
+        #self.max_epsilon = max_epsilon
+        #self.min_epsilon = min_epsilon
+        #self.epsilon_decay_rate = (
+        #    (max_epsilon - min_epsilon) / epsilon_decay if epsilon_decay > 0 else 0
+        #)
+        # self.state_size = env.observation_space.shape[0]
+        if isinstance(env.action_space, gym.spaces.Discrete):
+            self.action_dim = env.action_space.n
+        else:
+            raise ValueError("Action space must be discrete")
+        self.device = "cpu"
+
+        # override NeuralNet with NoisyNet
+        assert(self.obs_shape is not None)
+        self.dqn_network = NoisyNet(self.obs_shape, int(self.action_dim), sigma_init=sigma_init).to(self.device)
+        self.dqn_target = NoisyNet(self.obs_shape, int(self.action_dim), sigma_init=sigma_init).to(self.device)
+        self.dqn_target.load_state_dict(self.dqn_network.state_dict())
+
+        self.dqn_target.train(False)
+        self.optimizer = torch.optim.Adam(self.dqn_network.parameters(), lr=alpha)
+        self.batch_size = batch_size
+        self.testing = False
+        self.target_update_freq = target_update_freq
+        self.total_steps = 0
 
 
     def select_action(self, obs: np.ndarray) -> np.ndarray:
-        '''Same select_action() as pure DQN, without epsilon-greedy'''
-        if np.random.random() < self.epsilon:
-            return self.env.action_space.sample()
-        else:
-            obs_flat = obs.flatten()
-            obs_tensor = (
-                torch.as_tensor(obs_flat, dtype=torch.float32)
-                .unsqueeze(0)
-                .to(self.device)
-            )
-            with torch.no_grad():
-                q_vaues = self.dqn_network(obs_tensor)
-            return q_vaues.argmax().item()
+        '''Same as in pure DQN, but no epsilon-greedy. Instead always greedy (argmax) with respect to noisy Q. '''
+        #if np.random.random() < self.epsilon:
+        #    return self.env.action_space.sample()
+        #else:
+        obs_flat = obs.flatten()
+        obs_tensor = (
+            torch.as_tensor(obs_flat, dtype=torch.float32)
+            .unsqueeze(0)
+            .to(self.device)
+        )
+        with torch.no_grad():
+            q_vaues = self.dqn_network(obs_tensor)
+        return q_vaues.argmax().item()
 
     def step(self, state: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.float32, bool]:
         ''' Same as in pure DQN, but no epsilon decay'''
@@ -71,32 +102,21 @@ class NoisyDQN(DQN):
 
         return action, next_state, np.float32(reward), done
 
-    def update_model(self) -> torch.TensorType:
-        '''
-        Different from pure DQN, sampling buffer outputs weights and idxs,
-        and loss is now calculated with weights. Also, need to update priorities, once
-        '''
-        samples = self.memory.sample_batch() # sample = dict with many keys
-        losses = self._compute_dqn_loss(samples) # torch.Tensor
-
-        # calculate weighted loss rather than simple loss
-        weights = torch.FloatTensor(samples["weights"].reshape(-1,1)).to(self.device)
-        weighted_loss = torch.mean(losses * weights)
+    def update_model(self) -> float:
+        ''' Same as in pure DQN, but we create_epsilon (not greedy, but epsilon as in noise) to refresh noise'''
+        samples = self.memory.sample_batch()
+        loss = self._compute_dqn_loss(samples)
 
         self.optimizer.zero_grad()
-        weighted_loss.backward()
+        loss.backward()
         self.optimizer.step()
 
-        # update priorities given our index array
-        idxs = samples["idxs"] # simple array type
-        td_tensor = losses.detach().cpu().numpy() # untrack the gradients since this is not used for loss calculation but just priority tracking
-        td_tensor = td_tensor.squeeze()
+        # NOISY DQN SPECIFIC HERE!
+        # refresh epsilons in noisy layers inside our NoisyNet
+        self.dqn_network.reset_noise()
+        self.dqn_target.reset_noise()
 
-        new_priorities = np.atleast_1d(abs(td_tensor + self.td_epsilon)) # p_i = |delta_i| + epsilon
-        idxs = np.array(idxs)
-        self.memory.update_priorities(idxs, new_priorities) # updates in buffer with : p_i ^ omega
-
-        return weighted_loss.item()
+        return loss.item()
 
     def _compute_dqn_loss(self, samples: Dict[str, np.ndarray]) -> torch.Tensor:
         '''Same thing as pure dqn, but loss is calculated without reduction since we want to perform a torch.mean(widht * loss) later.'''
@@ -121,14 +141,12 @@ class NoisyDQN(DQN):
         return loss
 
     def _target_hard_update(self):
+        '''Same as DQN'''
         super()._target_hard_update()
 
     def train(self, num_episodes, show_progress=True):
-        '''Same as pure DQN, but beta improves slightly after incrementing reward'''
+        '''Same as DQN, but no epsilon'''
         rewards = []
-        beta_start = self.beta
-        BETA_END = 1.0
-        total_max_steps = num_episodes * 200 # average
 
         if show_progress:
             episode_bar = tqdm(total=num_episodes, desc="Episodes", leave=False)
@@ -149,10 +167,6 @@ class NoisyDQN(DQN):
                 state = next_state
                 ep_reward += reward
                 steps_n += 1
-
-                # PER specific: annealed_beta = beta * fraction where fraction is steps left in total
-                fraction = min(self.total_steps / total_max_steps, BETA_END)
-                self.beta = beta_start + fraction * (BETA_END - beta_start)
 
             # update target network if needed
             if episode % self.target_update_freq == 0:
@@ -202,20 +216,21 @@ if __name__ == "__main__":
     np.random.seed(SEED)
     random.seed(SEED)
     torch.manual_seed(SEED)
+    SIGMA_INIT = 0.5 # <---- NEW HYPERPARAM FOR NOISY NET
+
 
     env = gym.make("CartPole-v1")
     #env = gym.make('stocks-v0', frame_bound=(50, 100), window_size=50)
 
-    agent = PrioritizedDQN(
+    agent = NoisyDQN(
         env=env,
         mem_size=MEMORY_SIZE,
         batch_size=BATCH_SIZE,
         target_update_freq=TARGET_UPDATE_FREQ,
-        epsilon_decay=EPSILON_DECAY_STEPS,
+        #epsilon_decay=EPSILON_DECAY_STEPS,
         alpha=LEARNING_RATE,
-        omega= 0.5, # priority importance parameter
-        beta= 0.4,  # then gets increased more later
-        td_epsilon= 1e-6
+        sigma_init = SIGMA_INIT
+
     )
 
     rewards = agent.train(NUM_EPISODES)
@@ -240,7 +255,7 @@ if __name__ == "__main__":
 
     # also save png SAVE DID NOT WORK BTW
     os.makedirs("results", exist_ok=True)
-    plt.savefig("results/rewards_PrioritizedDQN.png")
-    print("Plot saved to results/rewards_PrioritizedDQN.png")
+    plt.savefig("results/rewards_NoisyDQN.png")
+    print("Plot saved to results/rewards_NoisyDQN.png")
 
     plt.show()

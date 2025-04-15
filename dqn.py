@@ -73,8 +73,7 @@ class DQN:
 
         self.dqn_network = NeuralNet(self.obs_shape, int(self.action_dim)).to(self.device)
         self.dqn_target = NeuralNet(self.obs_shape, int(self.action_dim)).to(self.device)
-        # make identical copies of the neural net
-        self.dqn_target.load_state_dict(self.dqn_network.state_dict())
+        self.dqn_target.load_state_dict(self.dqn_network.state_dict()) # make identical copies of the neural net
 
         self.dqn_target.train(False)
         self.optimizer = torch.optim.Adam(self.dqn_network.parameters(), lr=alpha)

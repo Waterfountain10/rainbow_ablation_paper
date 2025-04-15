@@ -72,11 +72,11 @@ class DuelingDQN(DQN):
         '''Same as PER'''
         return super().select_action(obs)
 
-    def step(self, state: np.ndarray) -> Tuple[np.ndarray, np.float64, bool]:
+    def step(self, state: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.float32, bool]:
         ''' Same as PER'''
         return super().step(state)
 
-    def update_model(self) -> torch.TensorType:
+    def update_model(self) -> float:
         '''
         Same thing as PER, but since we are dealing with two streams, gradients might become larger or more volatile than just with one stream.
         Many authors like in rainbow's paper, suggests clipping rewards.
@@ -104,7 +104,8 @@ class DuelingDQN(DQN):
         idxs = np.array(idxs)
         self.memory.update_priorities(idxs, new_priorities) # updates in buffer with : p_i ^ omega
 
-        return weighted_loss.item()
+        return weighted_loss.item() # extract float from tensor with a single scalar
+
 
     def _compute_dqn_loss(self, samples: Dict[str, np.ndarray]) -> torch.Tensor:
         '''Same thing as pure dqn, but loss is calculated without reduction since we want to perform a torch.mean(widht * loss) later.'''
