@@ -50,11 +50,11 @@ class PrioritizedDQN(DQN):
         '''Same select_action() as pure DQN, using epsilon-greedy'''
         return super().select_action(obs)
 
-    def step(self, state: np.ndarray) -> Tuple[np.ndarray, np.float64, bool]:
+    def step(self, state: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.float32, bool]:
         ''' Same as in pure DQN, but implicitly, memory stores differently under the hood'''
         return super().step(state)
 
-    def update_model(self) -> torch.TensorType:
+    def update_model(self) -> float:
         '''
         Different from pure DQN, sampling buffer outputs weights and idxs,
         and loss is now calculated with weights. Also, need to update priorities, once
@@ -64,7 +64,7 @@ class PrioritizedDQN(DQN):
 
         # calculate weighted loss rather than simple loss
         weights = torch.FloatTensor(samples["weights"].reshape(-1,1)).to(self.device)
-        weighted_loss = torch.mean(losses * weights)
+        weighted_loss = torch.mean(losses * weights) # tensor with a single scalar
 
         self.optimizer.zero_grad()
         weighted_loss.backward()
@@ -79,7 +79,7 @@ class PrioritizedDQN(DQN):
         idxs = np.array(idxs)
         self.memory.update_priorities(idxs, new_priorities) # updates in buffer with : p_i ^ omega
 
-        return weighted_loss.item()
+        return weighted_loss.item() # extract float from tensor with a single scalar
 
     def _compute_dqn_loss(self, samples: Dict[str, np.ndarray]) -> torch.Tensor:
         '''Same thing as pure dqn, but loss is calculated without reduction since we want to perform a torch.mean(widht * loss) later.'''

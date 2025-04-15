@@ -94,6 +94,7 @@ class DQN:
         # make identical copies of the neural net
         self.dqn_target.load_state_dict(self.dqn_network.state_dict())
 
+
         self.dqn_target.train(False)
         self.optimizer = torch.optim.Adam(self.dqn_network.parameters(), lr=alpha)
         self.batch_size = batch_size
@@ -137,8 +138,8 @@ class DQN:
 
         # exp decay
         self.epsilon = max(self.min_epsilon, self.epsilon * self.eps_exp_decay_rate)
-        
-        
+
+
         if self.epsilon == self.min_epsilon and self.updating_eps:
             self.updating_eps = False
             print("epsilon at minimum")

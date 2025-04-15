@@ -7,7 +7,7 @@ import numpy as np
 
 class NeuralNet(nn.Module):
     def __init__(self, input_dim: Tuple[int, ...], ouput_dim: int, hidden_dim=256):
-        super(NeuralNet, self).__init__()
+        super().__init__()
         flat_input_dim = int(np.prod(input_dim))
         self.fc1 = nn.Linear(flat_input_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)
