@@ -48,18 +48,20 @@ class DDQN(DQN):
         curr_q = curr_q_values.gather(1, action)
 
         with torch.no_grad():
-            # use online network to get actions
+            ############# different from dqn
+            # best_action <- get best next action from Q1
             next_q_values = self.dqn_network(next_state)
             best_actions = next_q_values.argmax(dim=1, keepdim=True)
 
-            # use target network to get best action
+            # next_q <- Q2(best action) (get expected reward based on Q2)
             next_target_q_values = self.dqn_target(next_state)
             next_q = next_target_q_values.gather(1, best_actions)
 
             # compute target
-            target = reward + self.gamma * next_q * (1 - done)
+            q_target = reward + self.gamma * next_q * (1 - done)
+            ############# different from dqn
 
-        loss = F.smooth_l1_loss(curr_q, target)
+        loss = F.smooth_l1_loss(curr_q, q_target)
 
         return loss
 

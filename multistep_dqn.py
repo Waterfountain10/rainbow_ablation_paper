@@ -56,6 +56,7 @@ class MultiStepDQN(DQN):
         done = terminated or trucated
         self.total_steps += 1
 
+        ################## different from dqn
         have_enough_in_buffer = self.memory_n.store(
             state=state,
             action=int(action),
@@ -64,7 +65,9 @@ class MultiStepDQN(DQN):
             done=done,
         )
         if have_enough_in_buffer:
+            # need to add here bc in train it uses len(self.memory) and don't want to override train()
             self.memory.store(state, int(action), reward, next_state, done)
+        ################## different from dqn
 
         # linear decay
         # self.epsilon = max(self.min_epsilon, self.epsilon - self.epsilon_decay_rate)
@@ -80,13 +83,19 @@ class MultiStepDQN(DQN):
 
     def update_model(self) -> float:
         samples = self.memory_n.sample_batch()
+
+        ##################### different from dqn
         # normal_loss = self._compute_dqn_loss(samples)
+
+        # need to calculate loss on gamma^{self.n_step} bc we accumulated gamma in the forward look
         gamma_temp = self.gamma
         self.gamma = self.gamma**self.n_step
         loss = self._compute_dqn_loss(
             samples=samples
         )  # TODO: if bad performance due to variance, can combine n-step loss with normal loss (i.e. uncomment the normal loss line and add it to loss)
+        # set gamma back to what it is supposed to be
         self.gamma = gamma_temp
+        ###################### different from dqn
 
         self.optimizer.zero_grad()
         loss.backward()

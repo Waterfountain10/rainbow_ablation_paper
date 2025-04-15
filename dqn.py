@@ -213,10 +213,6 @@ class DQN:
         self.env.close()
         return rewards
 
-        if show_progress and episode_bar is not None:
-            episode_bar.close()
-        self.env.close()
-        return rewards
 
     """def plot(self):
         plt.figure(figsize=10,5)
