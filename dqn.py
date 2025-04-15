@@ -44,16 +44,6 @@ class DQN:
     ):
         """Init"""
         self.env = env
-        # storage = LazyTensorStorage(max_size=mem_size)
-        # self.buffer = TensorDictReplayBuffer(
-        #     storage=storage, batch_size=batch_size
-        # )  # TODO: could add prefetch (multithreaded thing)
-        #    # TODO: could also add self.transition = list() to seperate storing transition into 2 steps
-        #            self.transition = [state, action]  # in select_action()
-        #            self.transition += [reward, next_state, done] # in step()
-        #            self.memory.store(*self.transition)  # in step()
-        #    this temporarily caches s and a, for other processes to work with in multiprocessing!
-
         self.obs_shape = env.observation_space.shape
         assert self.obs_shape is not None
         self.memory = ReplayBuffer(self.obs_shape, mem_size, batch_size=batch_size)
@@ -185,7 +175,6 @@ class DQN:
 
     def train(self, num_episodes, show_progress=True):
         rewards = []
-        steps_tot = 0
 
         episode_bar = None
         if show_progress:
@@ -204,13 +193,12 @@ class DQN:
                 if len(self.memory) >= self.batch_size:
                     loss = self.update_model()
 
-                if (steps_tot % self.target_update_freq == 0):
+                if (self.total_steps % self.target_update_freq == 0):
                     self._target_hard_update()
 
                 state = next_state
                 ep_reward += reward
                 steps_n += 1
-                steps_tot += 1
 
             # update target network if needed
             # self._target_hard_update()
@@ -218,7 +206,7 @@ class DQN:
             rewards.append(ep_reward)
             if show_progress and episode_bar is not None:
                 episode_bar.update(1)
-                episode_bar.set_postfix(reward=f"{ep_reward:.1f}", steps=steps_n, epsilon=f"{self.epsilon:.2f}")
+                episode_bar.set_postfix(reward=f"{ep_reward:.1f}", steps=steps_n, epsilon=f"{self.epsilon:.2f}", rews_avg=f"{np.mean(rewards):.2f}")
 
         if show_progress and episode_bar is not None:
             episode_bar.close()
@@ -271,13 +259,13 @@ if __name__ == "__main__":
     env = gym.make("CartPole-v1")
 
     #* Parameters I (denis) was using and found to produce better results
-    MEMORY_SIZE = 10000
-    BATCH_SIZE = 64
-    TARGET_UPDATE_FREQ = 30
-    EPSILON_DECAY_STEPS = 20000
+    MEMORY_SIZE = 500 # 500
+    BATCH_SIZE = 32 # 32
+    TARGET_UPDATE_FREQ = 300
+    EPSILON_DECAY_STEPS = 2e4 # 2e4
     LEARNING_RATE = 1e-3
     NUM_EPISODES = 1000  # Small number for testing
-    MIN_EPSILON = 0.05
+    MIN_EPSILON = 0.01
 
     # env = gym.make(
     #     "forex-v0",
@@ -308,7 +296,7 @@ if __name__ == "__main__":
     plt.plot(rewards, label="episode Reward", alpha=0.6)
 
     if len(rewards) >= 10:  # apply cumsum sliding mean
-        smoothed = running_mean(rewards, window_size=10)
+        smoothed = running_mean(rewards, window_size=50)
         plt.plot(
             range(10 - 1, len(rewards)),
             smoothed,
@@ -329,3 +317,4 @@ if __name__ == "__main__":
     # print("Plot saved to results/rewards.png")
 
     plt.show()
+    print("rewards mean: ", np.mean(rewards))
