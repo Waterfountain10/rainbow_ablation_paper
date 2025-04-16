@@ -6,6 +6,9 @@ from dqn import DQN
 import matplotlib.pyplot as plt
 from multistep_dqn import MultiStepDQN
 from util.running_mean import running_mean
+from gym_anytrading.datasets import FOREX_EURUSD_1H_ASK
+from LoadData import load_dataset
+import gym_anytrading
 
 # Parameters for DQN
 # MEMORY_SIZE = 20000
@@ -29,24 +32,28 @@ EPSILON_DECAY_STEPS = 2e4  # 2e4
 LEARNING_RATE = 1e-3
 NUM_EPISODES = 1000  # Small number for testing
 MIN_EPSILON = 0.01
-# env = gym.make(
-#     "forex-v0",
-#     df=FOREX_EURUSD_1H_ASK,
-#     window_size=10,
-#     frame_bound=(10, int(0.25 * len(FOREX_EURUSD_1H_ASK))),
-#     unit_side="right",
-# )
+
+DATA_SET = load_dataset("data/EURUSD_H4.csv", "Time")
+
+env = gym.make(
+    "forex-v0",
+    df=DATA_SET,
+    window_size=10,
+    frame_bound=(10, int(len(DATA_SET))),
+    unit_side="right",
+)
+print(len(DATA_SET))
 # gym.register_envs(ale_py)
 # env = gym.make("ALE/Assault-ram-v5", render_mode=None, max_episode_steps=1000)
-agent = DQN(
-    env=env,
-    mem_size=MEMORY_SIZE,
-    batch_size=BATCH_SIZE,
-    target_update_freq=TARGET_UPDATE_FREQ,
-    epsilon_decay=EPSILON_DECAY_STEPS,
-    alpha=LEARNING_RATE,
-    min_epsilon=MIN_EPSILON,
-)
+# agent = DQN(
+#     env=env,
+#     mem_size=MEMORY_SIZE,
+#     batch_size=BATCH_SIZE,
+#     target_update_freq=TARGET_UPDATE_FREQ,
+#     epsilon_decay=EPSILON_DECAY_STEPS,
+#     alpha=LEARNING_RATE,
+#     min_epsilon=MIN_EPSILON,
+# )
 
 agent = MultiStepDQN(
     env=env,
