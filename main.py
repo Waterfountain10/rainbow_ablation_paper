@@ -5,6 +5,7 @@ import gymnasium as gym
 from dqn import DQN
 import matplotlib.pyplot as plt
 from multistep_dqn import MultiStepDQN
+from ddqn import DDQN
 from util.running_mean import running_mean
 from gym_anytrading.datasets import FOREX_EURUSD_1H_ASK
 from LoadData import load_dataset
@@ -25,24 +26,44 @@ random.seed(SEED)
 torch.manual_seed(SEED)
 env = gym.make("CartPole-v1")
 # * Parameters I (denis) was using and found to produce better results
-MEMORY_SIZE = 500  # 500
-BATCH_SIZE = 32  # 32
-TARGET_UPDATE_FREQ = 300
-EPSILON_DECAY_STEPS = 2e4  # 2e4
-LEARNING_RATE = 1e-3
+MEMORY_SIZE = 100000
+BATCH_SIZE = 64  # 32
+TARGET_UPDATE_FREQ = 32000
+EPSILON_DECAY_STEPS = 1e6  # 2e4
+LEARNING_RATE = 6.25e-5
 NUM_EPISODES = 1000  # Small number for testing
 MIN_EPSILON = 0.01
 
-DATA_SET = load_dataset("data/EURUSD_H4.csv", "Time")
+data_sets = [
+    "data/AUDUSD_H4.csv",
+    "data/CADUSD_H4.csv",
+    "data/CHFUSD_H4.csv",
+    "data/EURUSD_H4.csv",
+    "data/GBPUSD_H4.csv",
+    "data/NZDUSD_H4.csv",
+]
 
-env = gym.make(
-    "forex-v0",
-    df=DATA_SET,
-    window_size=10,
-    frame_bound=(10, int(len(DATA_SET))),
-    unit_side="right",
-)
-print(len(DATA_SET))
+envs = []
+for set in data_sets:
+    data_set = load_dataset(set)
+    envs.append(
+        gym.make(
+            "forex-v0",
+            df=data_set,
+            window_size=10,
+            frame_bound=(10, int(0.25 * len(data_set))),
+            unit_side="right",
+        )
+    )
+
+# env = gym.make(
+#     "forex-v0",
+#     df=DATA_SET,
+#     window_size=10,
+#     frame_bound=(10, int(0.25 * len(DATA_SET))),
+#     unit_side="right",
+# )
+# print(0.25 * len(DATA_SET))
 # gym.register_envs(ale_py)
 # env = gym.make("ALE/Assault-ram-v5", render_mode=None, max_episode_steps=1000)
 # agent = DQN(
@@ -55,15 +76,14 @@ print(len(DATA_SET))
 #     min_epsilon=MIN_EPSILON,
 # )
 
-agent = MultiStepDQN(
-    env=env,
+agent = DDQN(
+    env=envs[0],
     mem_size=MEMORY_SIZE,
     batch_size=BATCH_SIZE,
     target_update_freq=TARGET_UPDATE_FREQ,
     epsilon_decay=EPSILON_DECAY_STEPS,
     alpha=LEARNING_RATE,
     min_epsilon=MIN_EPSILON,
-    n_step=3,
 )
 rewards = agent.train(NUM_EPISODES)
 # print("Rewards at end:", np.mean(rewards))
