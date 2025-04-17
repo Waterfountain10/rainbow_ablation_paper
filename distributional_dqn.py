@@ -144,12 +144,13 @@ class DistributionalDQN(DQN):
         self.optimizer.zero_grad()
         loss.backward()
         # After loss.backward()
-        # total_norm = 0.0
-        # for p in self.dqn_network.parameters():
-        #     if p.grad is not None:
-        #         param_norm = p.grad.detach().data.norm(2)
-        #         total_norm += param_norm.item() ** 2
-        # total_norm = total_norm ** 0.5
+        total_norm = 0.0
+        for p in self.dqn_network.parameters():
+            if p.grad is not None:
+                param_norm = p.grad.detach().data.norm(2)
+                total_norm += param_norm.item() ** 2
+        total_norm = total_norm ** 0.5
+        print(f'Grad = {total_norm}, Loss: {loss}')
         torch.nn.utils.clip_grad_norm_(self.dqn_network.parameters(), max_norm=10.0)
         self.optimizer.step()
         return loss.item()
@@ -408,9 +409,9 @@ class DistributionalDQN(DQN):
 
 if __name__ == "__main__":
    # Parameters for DQN
-    MEMORY_SIZE = 2000
+    MEMORY_SIZE = 150
     BATCH_SIZE = 64
-    TARGET_UPDATE_FREQ = 100
+    TARGET_UPDATE_FREQ = 10
     EPSILON_DECAY_STEPS = 5000
     LEARNING_RATE = 1e-5  # Try much smaller (current is 5e-4)
     # Small number for testing (increased it to compare with PER - will)
@@ -430,9 +431,10 @@ if __name__ == "__main__":
         target_update_freq=TARGET_UPDATE_FREQ,
         epsilon_decay=EPSILON_DECAY_STEPS,
         alpha=LEARNING_RATE,
+        min_epsilon=0.01,
         # Categorical DQN parameters
         v_min=-50,
-        v_max=300,
+        v_max=400,
         atom_size=51,
     )
 
