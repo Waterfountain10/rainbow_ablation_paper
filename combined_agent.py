@@ -726,7 +726,7 @@ def plot_results(ax, all_runs, title):
 
     # Plot smoothed rewards
     if len(mean_rewards) >= 10:
-        window = min(50, len(mean_rewards) // 10)
+        window = min(200, max(50, len(mean_rewards) // 20))  # Between 50-200 episodes
         smoothed = running_mean(mean_rewards, window_size=window)
         ax.plot(range(window-1, len(mean_rewards)), smoothed,
                 color='red', linewidth=2, label=f'Smoothed (window={window})')
@@ -831,7 +831,7 @@ def plot_all_features_together(env_name="CartPole-v1", num_episodes=500, num_run
             if config.get("random", False):
                 # Same random agent implementation as before
                 rewards = []
-                window = min(200, max(50, num_episodes // 20))  # Between 50-200 episodes
+                window_size = min(10, num_episodes // 10)
                 progress_bar = tqdm(range(num_episodes), desc=f"Random Agent")
                 
                 # Same implementation of random agent...
@@ -872,7 +872,7 @@ def plot_all_features_together(env_name="CartPole-v1", num_episodes=500, num_run
                 # Same training loop as before...
                 # (code omitted for brevity but is the same as your original)
                 rewards = []
-                window = min(200, max(50, num_episodes // 20))  # Between 50-200 episodes
+                window_size = min(10, num_episodes // 10)
                 progress_bar = tqdm(range(num_episodes), desc=config_name)
                 
                 for episode in progress_bar:
