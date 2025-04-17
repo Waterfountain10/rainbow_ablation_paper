@@ -7,6 +7,7 @@ import random
 
 import gymnasium as gym
 
+from LoadData import load_dataset
 from util.CombinedBuffer import CombinedBuffer
 from util.CombinedNetwork import CombinedNeuralNet
 import torch.nn.functional as F
@@ -16,11 +17,12 @@ from numbers import Number
 from util.running_mean import running_mean
 import torch.nn.functional as F
 from tqdm import tqdm
+import gym_anytrading
 
 class CombinedAgent:
     def __init__(
         self,
-        env: gym.Env,
+        envs: list[gym.Env],
         mem_size: int,
         batch_size: int,
         target_update_freq: int,
@@ -39,21 +41,23 @@ class CombinedAgent:
         },
         combined_params={
             # PER specific parameters:
-            "omega": 0.6,  # priority importance parameter
-            "beta": 0.4,  # then gets increased more later
+            "omega": 0.6,  # priority importance parameter # TODO 0 to 1
+            "beta": 0.4,  # then gets increased more later # TODO how it decays and 0.4 to 0.7
             "td_epsilon": 1e-6,
             # Categorical DQN parameters
             "v_min": 0.0,
             "v_max": 200.0,
             "atom_size": 51,
             # Nstep parameters
-            "n_step": 3,
+            "n_step": 3, # TODO  0 to anything
             "sigma_init": 0.5,
         },
     ):
         """Init"""
-        self.env = env
-        self.obs_shape = env.observation_space.shape
+        self.envs = envs
+        self.env = random.choice(self.envs)
+
+        self.obs_shape = self.env.observation_space.shape
         assert self.obs_shape is not None
         self.gamma = gamma
 
@@ -129,8 +133,8 @@ class CombinedAgent:
             )
 
         # self.state_size = env.observation_space.shape[0]
-        if isinstance(env.action_space, gym.spaces.Discrete):
-            self.action_dim = env.action_space.n
+        if isinstance(self.env.action_space, gym.spaces.Discrete):
+            self.action_dim = self.env.action_space.n
         else:
             raise ValueError("Action space must be discrete")
 
@@ -349,6 +353,7 @@ class CombinedAgent:
             # projection calculations
             Tz = samples["reward"] + self.gamma * \
                 self.support * (1 - samples["done"])
+            # print(torch.max(Tz))
             # ensure in range [v_min, v_max]
             # type: ignore since rewards and done are Tensors
             Tz = torch.clamp(Tz, self.v_min, self.v_max) # type: ignore
@@ -390,22 +395,22 @@ class CombinedAgent:
         if self.agent_config["usePrioritized"]:
             beta_start = self.beta
             BETA_END = 1.0
-            total_max_steps = num_episodes * 200  # approximative average
+            total_max_steps = num_episodes * 200  # TODO: approximative average
 
-        episode_bar = None
-        if show_progress:
-            episode_bar = tqdm(total=num_episodes,
-                               desc="Episodes", leave=False)
+        episode_bar = tqdm(total=num_episodes, desc="Episodes", leave=False)
 
         if self.agent_config["useDistributive"]:
             # Use fixed state for consistent distribution comparison
             fixed_state, _ = self.env.reset()
 
         for episode in range(num_episodes):
+            self.env = random.choice(self.envs)
             state, _ = self.env.reset()
             done = False
             ep_reward = 0
             steps_n = 0
+            ep_rewards = []
+            window_size = min(10, num_episodes // 10)
 
             while not done:
                 action, next_state, reward, done = self.step(state)
@@ -419,6 +424,7 @@ class CombinedAgent:
 
                 state = next_state
                 ep_reward += float(reward)
+                ep_rewards.append(reward)
                 steps_n += 1
 
                 if self.agent_config["usePrioritized"]:
@@ -438,17 +444,37 @@ class CombinedAgent:
                         fixed_state, episode)  # type: ignore
 
             rewards.append(ep_reward)
-            if show_progress and episode_bar is not None:
-                episode_bar.update(1)
-                episode_bar.set_postfix(reward=f"{ep_reward:.1f}", steps=steps_n,
-                                        epsilon=f"{self.epsilon:.2f}", rews_avg=f"{np.mean(rewards):.2f}")
+            # rewards2d.append(ep_rewards)
+            # Calculate moving average
+            
+            recent_rewards = rewards[-window_size:] if len(rewards) >= window_size else rewards
+            avg_reward = sum(recent_rewards) / len(recent_rewards)
+            
+            # Same progress bar update as before
+            postfix_dict = {
+                'reward': f"{ep_reward:.1f}",
+                'avg': f"{avg_reward:.1f}",
+                'steps': steps_n
+            }
+            
+            if not self.agent_config.get("useNoisy", False):
+                postfix_dict['ε'] = f"{self.epsilon:.3f}"
+            
+            # buffer_size = len(self.memory)
+            # postfix_dict['buffer'] = f"{buffer_size}/{MEMORY_SIZE}"
+            
+            episode_bar.update(1)
+            episode_bar.set_postfix(postfix_dict)
+            # episode_bar.update(1)
+            # episode_bar.set_postfix(reward=f"{ep_reward:.1f}", steps=steps_n,
+            #                         epsilon=f"{self.epsilon:.2f}", rews_avg=f"{np.mean(rewards):.2f}")
 
         if show_progress and episode_bar is not None:
             episode_bar.close()
         self.env.close()
 
-        if self.agent_config["useDistributive"]:
-            self.plot_distribution_evolution()
+        # if self.agent_config["useDistributive"]: # TODO may want to enable later
+        #     self.plot_distribution_evolution()
 
         return rewards
 
@@ -526,7 +552,8 @@ class CombinedAgent:
         # Save figures
         os.makedirs("distribution_plots", exist_ok=True)
         plt.savefig(f"distribution_plots/distribution_evolution.png")
-        plt.show()
+        plt.close()
+        # plt.show()
 
 
 def plot_isolated_features(env_name="CartPole-v1", num_episodes=500, num_runs=1, seed=42):
@@ -540,6 +567,7 @@ def plot_isolated_features(env_name="CartPole-v1", num_episodes=500, num_runs=1,
     EPSILON_DECAY_STEPS = 2e4
     LEARNING_RATE = 1e-3
     MIN_EPSILON = 0.01
+    # TODO hyperparams for neural net
 
     # Set up matplotlib
     plt.figure(figsize=(18, 14))
@@ -632,7 +660,7 @@ def plot_isolated_features(env_name="CartPole-v1", num_episodes=500, num_runs=1,
             else:
                 # Create the DQN agent
                 agent = CombinedAgent(
-                    env=env,
+                    envs=envs,
                     mem_size=MEMORY_SIZE,
                     batch_size=BATCH_SIZE,
                     target_update_freq=TARGET_UPDATE_FREQ,
@@ -762,7 +790,7 @@ def plot_all_features_together(env_name="CartPole-v1", num_episodes=500, num_run
     plt.figure(figsize=(12, 8))
     
     # Define color palette - using tab10 colormap for distinct colors
-    colors = plt.cm.tab10(np.linspace(0, 1, 9))
+    colors = plt.cm.tab10(np.linspace(0, 1, 9)) # type: ignore
     
     base_config = {
         "useDouble": False,
@@ -828,95 +856,21 @@ def plot_all_features_together(env_name="CartPole-v1", num_episodes=500, num_run
             # Create environment
             env = gym.make(env_name)
 
-            if config.get("random", False):
-                # Same random agent implementation as before
-                rewards = []
-                window_size = min(10, num_episodes // 10)
-                progress_bar = tqdm(range(num_episodes), desc=f"Random Agent")
-                
-                # Same implementation of random agent...
-                # (code omitted for brevity but is the same as your original)
-                for episode in progress_bar:
-                    state, _ = env.reset()
-                    done = False
-                    ep_reward = 0.0
-
-                    while not done:
-                        action = env.action_space.sample()
-                        next_state, reward, terminated, truncated, _ = env.step(action)
-                        done = terminated or truncated
-                        ep_reward += float(reward)
-
-                    rewards.append(ep_reward)
-                    
-                    # Update progress bar with metrics
-                    avg_recent = np.mean(rewards[-window_size:]) if len(rewards) >= window_size else np.mean(rewards)
-                    progress_bar.set_postfix({
-                        'reward': f"{ep_reward:.1f}",
-                        'avg_reward': f"{avg_recent:.1f}"
-                    })
-            else:
-                # Same agent training implementation as before
-                agent = CombinedAgent(
-                    env=env,
-                    mem_size=MEMORY_SIZE,
-                    batch_size=BATCH_SIZE,
-                    target_update_freq=TARGET_UPDATE_FREQ,
-                    epsilon_decay=EPSILON_DECAY_STEPS,
-                    alpha=LEARNING_RATE,
-                    min_epsilon=MIN_EPSILON,
-                    agent_config=config,
-                    combined_params=default_params,
-                )
-                
-                # Same training loop as before...
-                # (code omitted for brevity but is the same as your original)
-                rewards = []
-                window_size = min(10, num_episodes // 10)
-                progress_bar = tqdm(range(num_episodes), desc=config_name)
-                
-                for episode in progress_bar:
-                    state, _ = env.reset()
-                    done = False
-                    ep_reward = 0.0
-                    steps = 0
-                    
-                    while not done:
-                        action, next_state, reward, done = agent.step(state)
-                        
-                        if len(agent.memory) >= agent.batch_size:
-                            loss = agent.update_model()
-                        
-                        if (agent.total_steps % agent.target_update_freq == 0):
-                            agent._target_hard_update()
-                        
-                        state = next_state
-                        ep_reward += float(reward)
-                        steps += 1
-                    
-                    rewards.append(ep_reward)
-                    
-                    # Calculate moving average
-                    recent_rewards = rewards[-window_size:] if len(rewards) >= window_size else rewards
-                    avg_reward = sum(recent_rewards) / len(recent_rewards)
-                    
-                    # Same progress bar update as before
-                    postfix_dict = {
-                        'reward': f"{ep_reward:.1f}",
-                        'avg': f"{avg_reward:.1f}",
-                        'steps': steps
-                    }
-                    
-                    if not config.get("useNoisy", False):
-                        postfix_dict['ε'] = f"{agent.epsilon:.3f}"
-                    
-                    buffer_size = len(agent.memory)
-                    postfix_dict['buffer'] = f"{buffer_size}/{MEMORY_SIZE}"
-                    
-                    progress_bar.set_postfix(postfix_dict)
-
-            all_runs.append(rewards)
-            env.close()
+            # Same agent training implementation as before
+            agent = CombinedAgent(
+                envs=envs,
+                mem_size=MEMORY_SIZE,
+                batch_size=BATCH_SIZE,
+                target_update_freq=TARGET_UPDATE_FREQ,
+                epsilon_decay=EPSILON_DECAY_STEPS,
+                alpha=LEARNING_RATE,
+                min_epsilon=MIN_EPSILON,
+                agent_config=config,
+                combined_params=default_params,
+            )
+            
+            rewards = []
+            all_runs.append(agent.train(num_episodes))
 
         # Store results for this configuration
         all_results[config_name] = all_runs
@@ -983,16 +937,36 @@ def plot_all_features_together(env_name="CartPole-v1", num_episodes=500, num_run
     # Save figure with tight layout to include the legend
     plt.tight_layout()
     plt.savefig("results/dqn_variants_comparison_combined.png", dpi=300, bbox_inches='tight')
-    plt.show()
+    # plt.show()
 
     return all_results
 
+data_sets = [
+    "data/AUDUSD_H4.csv",
+    "data/CADUSD_H4.csv",
+    "data/CHFUSD_H4.csv",
+    "data/EURUSD_H4.csv",
+    "data/GBPUSD_H4.csv",
+    "data/NZDUSD_H4.csv",
+]
+
+envs = []
+for set in data_sets:
+    data_set = load_dataset(set)
+    envs.append(
+        gym.make(
+            "forex-v0",
+            df=data_set,
+            window_size=200,
+            frame_bound=(200, int(0.02 * len(data_set)))
+        )
+    )
 
 if __name__ == "__main__":
     
     results = plot_all_features_together(
         env_name="CartPole-v1",
-        num_episodes=2000,  # Train each agent for 50 episodes
+        num_episodes=100,  # Train each agent for 50 episodes
         num_runs=1,       # Run 1 trial for each configuration
         seed=42           # Set random seed for reproducibility
     )

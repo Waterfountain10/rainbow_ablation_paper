@@ -2,37 +2,126 @@ import numpy as np
 import random
 import torch
 import gymnasium as gym
-from dqn import DQN
 import matplotlib.pyplot as plt
-from multistep_dqn import MultiStepDQN
-from ddqn import DDQN
 from util.running_mean import running_mean
-from gym_anytrading.datasets import FOREX_EURUSD_1H_ASK
 from LoadData import load_dataset
 import gym_anytrading
+from combined_agent import CombinedAgent
+import argparse
+import os
 
-# Parameters for DQN
-# MEMORY_SIZE = 20000
-# BATCH_SIZE = 64
-# TARGET_UPDATE_FREQ = 100
-# EPSILON_DECAY_STEPS = 1500  # used to be 1500
-# LEARNING_RATE = 5e-4
-# NUM_EPISODES = (
-#     2000  # Small number for testing (increased it to compare with PER - will)
-# )
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train a DQN agent.")
+    parser.add_argument(
+        "-memory_size", type=int, default=DEFAULT_MEMORY_SIZE, help="Replay buffer size"
+    )
+    parser.add_argument(
+        "-batch_size",
+        type=int,
+        default=DEFAULT_BATCH_SIZE,
+        help="Batch size for training",
+    )
+    parser.add_argument(
+        "-target_update_freq",
+        type=int,
+        default=DEFAULT_TARGET_UPDATE_FREQ,
+        help="Frequency of target network updates",
+    )
+    parser.add_argument(
+        "-epsilon_decay_steps",
+        type=float,
+        default=DEFAULT_EPSILON_DECAY_STEPS,
+        help="Steps over which epsilon decays",
+    )
+    parser.add_argument(
+        "-lr", type=float, default=DEFAULT_LEARNING_RATE, help="Learning rate"
+    )
+    parser.add_argument(
+        "-num_episodes",
+        type=int,
+        default=DEFAULT_NUM_EPISODES,
+        help="Number of training episodes",
+    )
+    parser.add_argument(
+        "-min_epsilon",
+        type=float,
+        default=DEFAULT_MIN_EPSILON,
+        help="Minimum epsilon value",
+    )
+    parser.add_argument(
+        "-n_step", type=int, default=default_n_step, help="Multi-step return N"
+    )
+    parser.add_argument("-omega", type=float, default=default_omega, help="Omega value")
+    parser.add_argument("-beta", type=float, default=default_beta, help="Beta value")
+
+    return parser.parse_args()
+
+
 SEED = 42
 np.random.seed(SEED)
 random.seed(SEED)
 torch.manual_seed(SEED)
-env = gym.make("CartPole-v1")
-# * Parameters I (denis) was using and found to produce better results
-MEMORY_SIZE = 100000
-BATCH_SIZE = 64  # 32
-TARGET_UPDATE_FREQ = 32000
-EPSILON_DECAY_STEPS = 1e6  # 2e4
-LEARNING_RATE = 6.25e-5
-NUM_EPISODES = 1000  # Small number for testing
-MIN_EPSILON = 0.01
+
+# =============== hyperparams ==================
+WINDOW_SIZE = 200
+NUMBER_STEPS = 2000
+
+DEFAULT_MEMORY_SIZE = 80000  # find best
+DEFAULT_BATCH_SIZE = 64  # find best
+
+# TODO target_update_freq needs to be different whether using ddqn or not
+DEFAULT_TARGET_UPDATE_FREQ = 32000  # find best
+TARGET_UPDATE_FREQ_DQN = 300
+
+DEFAULT_LEARNING_RATE = 1e-4  # find best
+DEFAULT_NUM_EPISODES = 700
+DEFAULT_EPSILON_DECAY_STEPS = (
+    NUMBER_STEPS * DEFAULT_NUM_EPISODES * 0.7
+)  # want epsilon be be at minimum around 70% in the training
+
+DEFAULT_MIN_EPSILON = 0.01  # find best
+
+default_omega = 0.6
+default_beta = 0.4
+default_n_step = 3
+
+args = parse_args()
+
+MEMORY_SIZE = args.memory_size
+BATCH_SIZE = args.batch_size
+TARGET_UPDATE_FREQ = args.target_update_freq
+# TODO target_update_freq needs to be different whether using ddqn or not
+TARGET_UPDATE_FREQ_DQN = 300  # Keep or make configurable?
+
+EPSILON_DECAY_STEPS = args.epsilon_decay_steps
+LEARNING_RATE = args.lr
+NUM_EPISODES = args.num_episodes
+MIN_EPSILON = args.min_epsilon
+
+default_params = {
+    "omega": args.omega,  # from 0 to 1
+    "beta": args.beta,  # from 0.4 to 0.7
+    "td_epsilon": 1e-6,
+    "v_min": -100.0,
+    "v_max": 100.0,
+    "atom_size": 51,
+    "n_step": args.n_step,  # find best
+    "sigma_init": 0.5,
+    "gamma": 0.99,
+}
+
+# ============== end of hyperparams ============
+
+
+rainbow_config = {
+    "useDouble": True,
+    "usePrioritized": True,
+    "useDuel": True,
+    "useNoisy": True,
+    "useNstep": True,
+    "useDistributive": True,
+}
 
 data_sets = [
     "data/AUDUSD_H4.csv",
@@ -50,41 +139,24 @@ for set in data_sets:
         gym.make(
             "forex-v0",
             df=data_set,
-            window_size=10,
-            frame_bound=(10, int(0.25 * len(data_set))),
+            window_size=WINDOW_SIZE,
+            frame_bound=(WINDOW_SIZE, WINDOW_SIZE + NUMBER_STEPS + 1),
             unit_side="right",
         )
     )
 
-# env = gym.make(
-#     "forex-v0",
-#     df=DATA_SET,
-#     window_size=10,
-#     frame_bound=(10, int(0.25 * len(DATA_SET))),
-#     unit_side="right",
-# )
-# print(0.25 * len(DATA_SET))
-# gym.register_envs(ale_py)
-# env = gym.make("ALE/Assault-ram-v5", render_mode=None, max_episode_steps=1000)
-# agent = DQN(
-#     env=env,
-#     mem_size=MEMORY_SIZE,
-#     batch_size=BATCH_SIZE,
-#     target_update_freq=TARGET_UPDATE_FREQ,
-#     epsilon_decay=EPSILON_DECAY_STEPS,
-#     alpha=LEARNING_RATE,
-#     min_epsilon=MIN_EPSILON,
-# )
-
-agent = DDQN(
-    env=envs[0],
+agent = CombinedAgent(
+    envs=envs,
     mem_size=MEMORY_SIZE,
     batch_size=BATCH_SIZE,
     target_update_freq=TARGET_UPDATE_FREQ,
     epsilon_decay=EPSILON_DECAY_STEPS,
     alpha=LEARNING_RATE,
     min_epsilon=MIN_EPSILON,
+    agent_config=rainbow_config,
+    combined_params=default_params,
 )
+
 rewards = agent.train(NUM_EPISODES)
 # print("Rewards at end:", np.mean(rewards))
 # PLOT GRAPH AND SAVE IT
@@ -98,16 +170,26 @@ if len(rewards) >= 10:  # apply cumsum sliding mean
         label="smoothed window 10",
         linewidth=2,
     )
+
+# Calculate and plot the average reward
+average_reward = np.mean(rewards)
+plt.axhline(
+    average_reward, # type: ignore
+    color="r",
+    linestyle="--",
+    label=f"Average Reward: {average_reward:.2f}",
+)
+
 plt.title("DQN training rewards")
 plt.xlabel("Episode")
 plt.ylabel("Episode reward")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
-plt.show()
 # also save png SAVE DID NOT WORK BTW
-# os.makedirs("results", exist_ok=True)
-# plt.savefig("results/rewards_DQN.png")
-# print("Plot saved to results/rewards.png")
-plt.show()
+os.makedirs("results", exist_ok=True)
+plt.savefig(
+    f"results/mem{MEMORY_SIZE}_batch{BATCH_SIZE}_targUpd{TARGET_UPDATE_FREQ}_eDecSt{EPSILON_DECAY_STEPS}_lr{LEARNING_RATE}_minEps{MIN_EPSILON}_omga{args.omega}_b{args.beta}_n{args.n_step}.png"
+)
+print("Plot saved to results/rewards.png")
 print("rewards mean: ", np.mean(rewards))
