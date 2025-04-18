@@ -952,7 +952,7 @@ data_sets = [
 
 envs = []
 for set in data_sets:
-    data_set = load_dataset(set)
+    data_set = load_dataset(set, 2000)
     envs.append(
         gym.make(
             "forex-v0",
@@ -966,11 +966,7 @@ if __name__ == "__main__":
     
     results = plot_all_features_together(
         env_name="CartPole-v1",
-<<<<<<< Updated upstream
-        num_episodes=100,  # Train each agent for 50 episodes
-=======
         num_episodes=1000,  # Train each agent for 50 episodes
->>>>>>> Stashed changes
         num_runs=1,       # Run 1 trial for each configuration
         seed=42           # Set random seed for reproducibility
     )

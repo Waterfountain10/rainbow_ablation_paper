@@ -118,7 +118,7 @@ rainbow_config = {
     "useDouble": True,
     "usePrioritized": True,
     "useDuel": True,
-    "useNoisy": True,
+    "useNoisy": False,
     "useNstep": True,
     "useDistributive": True,
 }
@@ -134,7 +134,7 @@ data_sets = [
 
 envs = []
 for set in data_sets:
-    data_set = load_dataset(set)
+    data_set = load_dataset(set, WINDOW_SIZE + NUM_EPISODES + 1)
     envs.append(
         gym.make(
             "forex-v0",
