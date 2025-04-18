@@ -65,22 +65,22 @@ torch.manual_seed(SEED)
 
 # =============== hyperparams ==================
 WINDOW_SIZE = 200
-NUMBER_STEPS = 2000
+NUMBER_STEPS = 700
 
-DEFAULT_MEMORY_SIZE = 80000  # find best
-DEFAULT_BATCH_SIZE = 64  # find best
+DEFAULT_MEMORY_SIZE = 80000  # 80K is good
+DEFAULT_BATCH_SIZE = 256  # find best
 
 # TODO target_update_freq needs to be different whether using ddqn or not
 DEFAULT_TARGET_UPDATE_FREQ = 32000  # find best
 TARGET_UPDATE_FREQ_DQN = 300
 
-DEFAULT_LEARNING_RATE = 1e-4  # find best
+DEFAULT_LEARNING_RATE = 5e-4  # find best
 DEFAULT_NUM_EPISODES = 700
 DEFAULT_EPSILON_DECAY_STEPS = (
     NUMBER_STEPS * DEFAULT_NUM_EPISODES * 0.7
 )  # want epsilon be be at minimum around 70% in the training
 
-DEFAULT_MIN_EPSILON = 0.01  # find best
+DEFAULT_MIN_EPSILON = 0.10  # find best
 
 default_omega = 0.6
 default_beta = 0.4
@@ -118,7 +118,7 @@ rainbow_config = {
     "useDouble": True,
     "usePrioritized": True,
     "useDuel": True,
-    "useNoisy": True,
+    "useNoisy": False,
     "useNstep": True,
     "useDistributive": True,
 }
@@ -134,13 +134,13 @@ data_sets = [
 
 envs = []
 for set in data_sets:
-    data_set = load_dataset(set)
+    data_set = load_dataset(set, WINDOW_SIZE + NUMBER_STEPS + 1)
     envs.append(
         gym.make(
             "forex-v0",
             df=data_set,
             window_size=WINDOW_SIZE,
-            frame_bound=(WINDOW_SIZE, WINDOW_SIZE + NUMBER_STEPS + 1),
+            frame_bound=(WINDOW_SIZE, len(data_set)),
             unit_side="right",
         )
     )
@@ -162,12 +162,12 @@ rewards = agent.train(NUM_EPISODES)
 # PLOT GRAPH AND SAVE IT
 plt.figure(figsize=(10, 5))
 plt.plot(rewards, label="episode Reward", alpha=0.6)
-if len(rewards) >= 10:  # apply cumsum sliding mean
-    smoothed = running_mean(rewards, window_size=10)
+if len(rewards) >= 20:  # apply cumsum sliding mean
+    smoothed = running_mean(rewards, window_size=20)
     plt.plot(
-        range(10 - 1, len(rewards)),
+        range(20 - 1, len(rewards)),
         smoothed,
-        label="smoothed window 10",
+        label="smoothed window 20",
         linewidth=2,
     )
 

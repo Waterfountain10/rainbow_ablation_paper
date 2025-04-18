@@ -224,12 +224,12 @@ class DQN:
 
                 episode_bar.update(1)
                 # episode_bar.set_postfix(postfix_dict)
-                # episode_bar.set_postfix(
-                #     reward=f"{ep_reward:.1f}",
-                #     steps=steps_n,
-                #     epsilon=f"{self.epsilon:.2f}",
-                #     rews_avg=f"{np.mean(rewards):.2f}",
-                # )
+                episode_bar.set_postfix(
+                    reward=f"{ep_reward:.1f}",
+                    steps=steps_n,
+                    epsilon=f"{self.epsilon:.2f}",
+                    rews_avg=f"{np.mean(rewards):.2f}",
+                )
 
         if show_progress and episode_bar is not None:
             episode_bar.close()

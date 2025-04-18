@@ -446,23 +446,23 @@ class CombinedAgent:
             rewards.append(ep_reward)
             # rewards2d.append(ep_rewards)
             # Calculate moving average
-            
+
             recent_rewards = rewards[-window_size:] if len(rewards) >= window_size else rewards
             avg_reward = sum(recent_rewards) / len(recent_rewards)
-            
+
             # Same progress bar update as before
             postfix_dict = {
                 'reward': f"{ep_reward:.1f}",
                 'avg': f"{avg_reward:.1f}",
                 'steps': steps_n
             }
-            
+
             if not self.agent_config.get("useNoisy", False):
                 postfix_dict['ε'] = f"{self.epsilon:.3f}"
-            
+
             # buffer_size = len(self.memory)
             # postfix_dict['buffer'] = f"{buffer_size}/{MEMORY_SIZE}"
-            
+
             episode_bar.update(1)
             episode_bar.set_postfix(postfix_dict)
             # episode_bar.update(1)
@@ -580,7 +580,7 @@ def plot_isolated_features(env_name="CartPole-v1", num_episodes=500, num_runs=1,
         "useNstep": False,
         "useDistributive": False
     }
-    
+
     # Define configurations to test
     configs = [
         {"name": "Base DQN", "config": base_config.copy()},
@@ -595,7 +595,7 @@ def plot_isolated_features(env_name="CartPole-v1", num_episodes=500, num_runs=1,
             "useNoisy": True, "useNstep": True, "useDistributive": True
         }},
     ]
-    
+
     default_params = {
         "omega": 0.6,
         "beta": 0.4,
@@ -621,7 +621,7 @@ def plot_isolated_features(env_name="CartPole-v1", num_episodes=500, num_runs=1,
         for run in range(num_runs):
             run_desc = f"Run {run+1}/{num_runs}" if num_runs > 1 else "Training"
             print(f"\n{run_desc} for {config_name}...")
-            
+
             # Set seeds for reproducibility
             run_seed = seed + run
             np.random.seed(run_seed)
@@ -636,7 +636,7 @@ def plot_isolated_features(env_name="CartPole-v1", num_episodes=500, num_runs=1,
                 rewards = []
                 window_size = min(10, num_episodes // 10)
                 progress_bar = tqdm(range(num_episodes), desc=f"Random Agent")
-                
+
                 for episode in progress_bar:
                     state, _ = env.reset()
                     done = False
@@ -649,14 +649,14 @@ def plot_isolated_features(env_name="CartPole-v1", num_episodes=500, num_runs=1,
                         ep_reward += float(reward)
 
                     rewards.append(ep_reward)
-                    
+
                     # Update progress bar with metrics
                     avg_recent = np.mean(rewards[-window_size:]) if len(rewards) >= window_size else np.mean(rewards)
                     progress_bar.set_postfix({
                         'reward': f"{ep_reward:.1f}",
                         'avg_reward': f"{avg_recent:.1f}"
                     })
-                
+
             else:
                 # Create the DQN agent
                 agent = CombinedAgent(
@@ -670,53 +670,53 @@ def plot_isolated_features(env_name="CartPole-v1", num_episodes=500, num_runs=1,
                     agent_config=config,
                     combined_params=default_params,
                 )
-                
+
                 # Train with detailed progress tracking
                 rewards = []
                 window_size = min(10, num_episodes // 10)
                 progress_bar = tqdm(range(num_episodes), desc=config_name)
-                
+
                 for episode in progress_bar:
                     state, _ = env.reset()
                     done = False
                     ep_reward = 0.0
                     steps = 0
-                    
+
                     while not done:
                         action, next_state, reward, done = agent.step(state)
-                        
+
                         # Only update if batch has enough samples
                         if len(agent.memory) >= agent.batch_size:
                             loss = agent.update_model()
-                        
+
                         if (agent.total_steps % agent.target_update_freq == 0):
                             agent._target_hard_update()
-                        
+
                         state = next_state
                         ep_reward += float(reward)
                         steps += 1
-                    
+
                     rewards.append(ep_reward)
-                    
+
                     # Calculate moving average
                     recent_rewards = rewards[-window_size:] if len(rewards) >= window_size else rewards
                     avg_reward = sum(recent_rewards) / len(recent_rewards)
-                    
+
                     # Update progress bar with metrics
                     postfix_dict = {
                         'reward': f"{ep_reward:.1f}",
                         'avg': f"{avg_reward:.1f}",
                         'steps': steps
                     }
-                    
+
                     # Add epsilon if not using noisy networks
                     if not config.get("useNoisy", False):
                         postfix_dict['ε'] = f"{agent.epsilon:.3f}"
-                    
+
                     # Add buffer size
                     buffer_size = len(agent.memory)
                     postfix_dict['buffer'] = f"{buffer_size}/{MEMORY_SIZE}"
-                    
+
                     progress_bar.set_postfix(postfix_dict)
 
             all_runs.append(rewards)
@@ -788,10 +788,10 @@ def plot_all_features_together(env_name="CartPole-v1", num_episodes=500, num_run
 
     # Set up matplotlib
     plt.figure(figsize=(12, 8))
-    
+
     # Define color palette - using tab10 colormap for distinct colors
     colors = plt.cm.tab10(np.linspace(0, 1, 9)) # type: ignore
-    
+
     base_config = {
         "useDouble": False,
         "usePrioritized": False,
@@ -800,7 +800,7 @@ def plot_all_features_together(env_name="CartPole-v1", num_episodes=500, num_run
         "useNstep": False,
         "useDistributive": False
     }
-    
+
     # Define configurations to test
     configs = [
         {"name": "Base DQN", "config": base_config.copy()},
@@ -815,7 +815,7 @@ def plot_all_features_together(env_name="CartPole-v1", num_episodes=500, num_run
             "useNoisy": True, "useNstep": True, "useDistributive": True
         }},
     ]
-    
+
     default_params = {
         "omega": 0.6,
         "beta": 0.4,
@@ -831,7 +831,7 @@ def plot_all_features_together(env_name="CartPole-v1", num_episodes=500, num_run
     # Train each configuration multiple times
     all_results = {}
     smoothed_rewards = {}
-    
+
     # For calculating y-axis limits later
     all_max_rewards = []
     all_min_rewards = []
@@ -846,7 +846,7 @@ def plot_all_features_together(env_name="CartPole-v1", num_episodes=500, num_run
         for run in range(num_runs):
             run_desc = f"Run {run+1}/{num_runs}" if num_runs > 1 else "Training"
             print(f"\n{run_desc} for {config_name}...")
-            
+
             # Set seeds for reproducibility
             run_seed = seed + run
             np.random.seed(run_seed)
@@ -868,7 +868,7 @@ def plot_all_features_together(env_name="CartPole-v1", num_episodes=500, num_run
                 agent_config=config,
                 combined_params=default_params,
             )
-            
+
             rewards = []
             all_runs.append(agent.train(num_episodes))
 
@@ -879,7 +879,7 @@ def plot_all_features_together(env_name="CartPole-v1", num_episodes=500, num_run
         all_runs_array = np.array(all_runs)
         mean_rewards = np.mean(all_runs_array, axis=0)
         std_rewards = np.std(all_runs_array, axis=0)
-        
+
         # Track min/max for plot scaling
         all_max_rewards.append(np.max(mean_rewards + std_rewards))
         all_min_rewards.append(np.min(mean_rewards - std_rewards))
@@ -895,28 +895,28 @@ def plot_all_features_together(env_name="CartPole-v1", num_episodes=500, num_run
             }
         else:
             smoothed_rewards[config_name] = None
-    
+
     # Plot all configurations on the same graph
     for i, config_info in enumerate(configs):
         config_name = config_info["name"]
         all_runs_array = np.array(all_results[config_name])
         mean_rewards = np.mean(all_runs_array, axis=0)
         std_rewards = np.std(all_runs_array, axis=0)
-        
+
         # Plot with confidence bands
         x = np.arange(len(mean_rewards))
-        
+
         # # Plot the mean line with proper color and label
         # plt.plot(x, mean_rewards, color=colors[i], alpha=0.7, lw=1.5, label=f"{config_name} (Mean)")
-        
+
         # # Add confidence interval
         # plt.fill_between(x, mean_rewards - std_rewards, mean_rewards + std_rewards,
         #                 color=colors[i], alpha=0.15)
-        
+
         # Add smoothed line if available
         if smoothed_rewards[config_name] is not None:
             smooth_data = smoothed_rewards[config_name]
-            plt.plot(smooth_data['x'], smooth_data['y'], 
+            plt.plot(smooth_data['x'], smooth_data['y'],
                     color=colors[i], linewidth=2.5, linestyle='-',
                     label=f"{config_name} (Smoothed, window={smooth_data['window']})")
 
@@ -925,15 +925,15 @@ def plot_all_features_together(env_name="CartPole-v1", num_episodes=500, num_run
     plt.ylabel('Reward', fontsize=12)
     plt.title(f'Performance Comparison of DQN Variants on {env_name}', fontsize=14)
     plt.grid(True, linestyle='--', alpha=0.3)
-    
+
     # Add legend outside the plot to avoid overcrowding
     plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0)
-    
+
     # Set y-axis limits with some padding
     max_reward = max(all_max_rewards) * 1.1
     min_reward = min(all_min_rewards) * 0.9
     plt.ylim(min_reward, max_reward)
-    
+
     # Save figure with tight layout to include the legend
     plt.tight_layout()
     plt.savefig("results/dqn_variants_comparison_combined.png", dpi=300, bbox_inches='tight')
@@ -952,7 +952,7 @@ data_sets = [
 
 envs = []
 for set in data_sets:
-    data_set = load_dataset(set)
+    data_set = load_dataset(set, 2000)
     envs.append(
         gym.make(
             "forex-v0",
@@ -963,14 +963,10 @@ for set in data_sets:
     )
 
 if __name__ == "__main__":
-    
+
     results = plot_all_features_together(
         env_name="CartPole-v1",
-<<<<<<< Updated upstream
-        num_episodes=100,  # Train each agent for 50 episodes
-=======
         num_episodes=1000,  # Train each agent for 50 episodes
->>>>>>> Stashed changes
         num_runs=1,       # Run 1 trial for each configuration
         seed=42           # Set random seed for reproducibility
     )

@@ -13,7 +13,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dqn import DQN
 import torch
 import torch.nn.functional as F
-import ale_py
+from gym_anytrading.datasets import FOREX_EURUSD_1H_ASK
 
 
 class DDQN(DQN):
@@ -193,18 +193,28 @@ if __name__ == "__main__":
 
     envs = []
     for set in data_sets:
-        data_set = load_dataset(set)
+        data_set = load_dataset(set, WINDOW_SIZE + NUMBER_STEPS + 1)
         envs.append(
             gym.make(
                 "forex-v0",
                 df=data_set,
                 window_size=WINDOW_SIZE,
-                frame_bound=(WINDOW_SIZE, WINDOW_SIZE + NUMBER_STEPS + 1),
+                frame_bound=(WINDOW_SIZE, len(data_set)),
                 unit_side="right",
             )
         )
 
-    agent = DQN(
+    # envs = [
+    #     gym.make(
+    #             "forex-v0",
+    #             df=FOREX_EURUSD_1H_ASK,
+    #             window_size=WINDOW_SIZE,
+    #             frame_bound=(WINDOW_SIZE, WINDOW_SIZE + NUMBER_STEPS + 1),
+    #             unit_side="right",
+    #         )
+    # ]
+
+    agent = DDQN(
         envs=envs,
         mem_size=MEMORY_SIZE,
         batch_size=BATCH_SIZE,
