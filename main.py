@@ -94,7 +94,7 @@ TARGET_UPDATE_FREQ = args.target_update_freq
 # TODO target_update_freq needs to be different whether using ddqn or not
 TARGET_UPDATE_FREQ_DQN = 300  # Keep or make configurable?
 
-EPSILON_DECAY_STEPS = args.epsilon_decay_steps
+EPSILON_DECAY_STEPS = int(args.epsilon_decay_steps)
 LEARNING_RATE = args.lr
 NUM_EPISODES = args.num_episodes
 MIN_EPSILON = args.min_epsilon
@@ -174,7 +174,7 @@ if len(rewards) >= 10:  # apply cumsum sliding mean
 # Calculate and plot the average reward
 average_reward = np.mean(rewards)
 plt.axhline(
-    average_reward, # type: ignore
+    average_reward,  # type: ignore
     color="r",
     linestyle="--",
     label=f"Average Reward: {average_reward:.2f}",
@@ -189,7 +189,7 @@ plt.tight_layout()
 # also save png SAVE DID NOT WORK BTW
 os.makedirs("results", exist_ok=True)
 plt.savefig(
-    f"results/mem{MEMORY_SIZE}_batch{BATCH_SIZE}_targUpd{TARGET_UPDATE_FREQ}_eDecSt{EPSILON_DECAY_STEPS}_lr{LEARNING_RATE}_minEps{MIN_EPSILON}_omga{args.omega}_b{args.beta}_n{args.n_step}.png"
+    f"results/mem{MEMORY_SIZE:d}_batch{BATCH_SIZE:d}_targUpd{TARGET_UPDATE_FREQ:d}_eDecSt{EPSILON_DECAY_STEPS:d}_lr{LEARNING_RATE}_minEps{MIN_EPSILON}_omga{args.omega}_b{args.beta}_n{args.n_step:d}.png"
 )
 print("Plot saved to results/rewards.png")
 print("rewards mean: ", np.mean(rewards))

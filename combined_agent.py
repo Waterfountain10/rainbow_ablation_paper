@@ -391,6 +391,7 @@ class CombinedAgent:
         self.dqn_target.load_state_dict(self.dqn_network.state_dict())
 
     def train(self, num_episodes, show_progress=True):
+        window_size = min(10, num_episodes // 10)
         rewards = []
         if self.agent_config["usePrioritized"]:
             beta_start = self.beta
@@ -410,7 +411,6 @@ class CombinedAgent:
             ep_reward = 0
             steps_n = 0
             ep_rewards = []
-            window_size = min(10, num_episodes // 10)
 
             while not done:
                 action, next_state, reward, done = self.step(state)
