@@ -41,7 +41,7 @@ def run_ddqn(params):
 
 if __name__ == "__main__":
     # Define hyperparameter ranges to test
-    memory_sizes = [40000, 200000]
+    memory_sizes = [40000]
     batch_sizes = [32, 64, 128]
     target_update_freqs = [3000, 6000, 32000] # Adjust based on ddqn.py defaults/needs
     # epsilon_decay_steps_list = [500000, 1000000] # Adjust based on ddqn.py defaults/needs
