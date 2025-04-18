@@ -5,7 +5,7 @@ import os
 
 def run_ddqn(params):
     """Runs the ddqn.py script with the given parameters."""
-    memory_size, batch_size, target_update_freq, epsilon_decay_steps, lr, min_epsilon, omega, beta, n_step = params
+    memory_size, batch_size, target_update_freq,  lr, omega, beta  = params
     command = [
         "python",
         "ddqn.py",

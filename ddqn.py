@@ -154,7 +154,7 @@ if __name__ == "__main__":
     # TODO target_update_freq needs to be different whether using ddqn or not
     TARGET_UPDATE_FREQ_DQN = 300  # Keep or make configurable?
 
-    EPSILON_DECAY_STEPS = args.epsilon_decay_steps
+    EPSILON_DECAY_STEPS = int(args.epsilon_decay_steps)
     LEARNING_RATE = args.lr
     NUM_EPISODES = args.num_episodes
     MIN_EPSILON = args.min_epsilon
@@ -217,6 +217,7 @@ if __name__ == "__main__":
     )
 
     rewards = agent.train(NUM_EPISODES)
+    # rewards = [1]
     # print("Rewards at end:", np.mean(rewards))
     # PLOT GRAPH AND SAVE IT
     plt.figure(figsize=(10, 5))
