@@ -68,7 +68,7 @@ WINDOW_SIZE = 200
 NUMBER_STEPS = 700
 
 DEFAULT_MEMORY_SIZE = 80000  # 80K is good
-DEFAULT_BATCH_SIZE = 64  # find best
+DEFAULT_BATCH_SIZE = 256  # find best
 
 # TODO target_update_freq needs to be different whether using ddqn or not
 DEFAULT_TARGET_UPDATE_FREQ = 32000  # find best
