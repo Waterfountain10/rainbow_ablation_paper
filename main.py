@@ -67,20 +67,20 @@ torch.manual_seed(SEED)
 WINDOW_SIZE = 200
 NUMBER_STEPS = 700
 
-DEFAULT_MEMORY_SIZE = 80000  # find best
+DEFAULT_MEMORY_SIZE = 80000  # 80K is good
 DEFAULT_BATCH_SIZE = 64  # find best
 
 # TODO target_update_freq needs to be different whether using ddqn or not
 DEFAULT_TARGET_UPDATE_FREQ = 32000  # find best
 TARGET_UPDATE_FREQ_DQN = 300
 
-DEFAULT_LEARNING_RATE = 1e-4  # find best
+DEFAULT_LEARNING_RATE = 5e-4  # find best
 DEFAULT_NUM_EPISODES = 700
 DEFAULT_EPSILON_DECAY_STEPS = (
     NUMBER_STEPS * DEFAULT_NUM_EPISODES * 0.7
 )  # want epsilon be be at minimum around 70% in the training
 
-DEFAULT_MIN_EPSILON = 0.01  # find best
+DEFAULT_MIN_EPSILON = 0.10  # find best
 
 default_omega = 0.6
 default_beta = 0.4
