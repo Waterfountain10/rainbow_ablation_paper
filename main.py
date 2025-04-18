@@ -65,7 +65,7 @@ torch.manual_seed(SEED)
 
 # =============== hyperparams ==================
 WINDOW_SIZE = 200
-NUMBER_STEPS = 500
+NUMBER_STEPS = 700
 
 DEFAULT_MEMORY_SIZE = 80000  # find best
 DEFAULT_BATCH_SIZE = 64  # find best
@@ -162,12 +162,12 @@ rewards = agent.train(NUM_EPISODES)
 # PLOT GRAPH AND SAVE IT
 plt.figure(figsize=(10, 5))
 plt.plot(rewards, label="episode Reward", alpha=0.6)
-if len(rewards) >= 10:  # apply cumsum sliding mean
-    smoothed = running_mean(rewards, window_size=10)
+if len(rewards) >= 20:  # apply cumsum sliding mean
+    smoothed = running_mean(rewards, window_size=20)
     plt.plot(
-        range(10 - 1, len(rewards)),
+        range(20 - 1, len(rewards)),
         smoothed,
-        label="smoothed window 10",
+        label="smoothed window 20",
         linewidth=2,
     )
 
