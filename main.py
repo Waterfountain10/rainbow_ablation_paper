@@ -65,7 +65,7 @@ torch.manual_seed(SEED)
 
 # =============== hyperparams ==================
 WINDOW_SIZE = 200
-NUMBER_STEPS = 2000
+NUMBER_STEPS = 500
 
 DEFAULT_MEMORY_SIZE = 80000  # find best
 DEFAULT_BATCH_SIZE = 64  # find best
@@ -134,13 +134,13 @@ data_sets = [
 
 envs = []
 for set in data_sets:
-    data_set = load_dataset(set, WINDOW_SIZE + NUM_EPISODES + 1)
+    data_set = load_dataset(set, WINDOW_SIZE + NUMBER_STEPS + 1)
     envs.append(
         gym.make(
             "forex-v0",
             df=data_set,
             window_size=WINDOW_SIZE,
-            frame_bound=(WINDOW_SIZE, WINDOW_SIZE + NUMBER_STEPS + 1),
+            frame_bound=(WINDOW_SIZE, len(data_set)),
             unit_side="right",
         )
     )
