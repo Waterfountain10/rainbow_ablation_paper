@@ -821,7 +821,7 @@ def plot_all_features_together(env_name="CartPole-v1", num_episodes=500, num_run
         "beta": 0.4,
         "td_epsilon": 1e-6,
         "v_min": 0.0,
-        "v_max": 200.0,
+        "v_max": 500.0,
         "atom_size": 51,
         "n_step": 3,
         "sigma_init": 0.5,
@@ -966,7 +966,11 @@ if __name__ == "__main__":
     
     results = plot_all_features_together(
         env_name="CartPole-v1",
+<<<<<<< Updated upstream
         num_episodes=100,  # Train each agent for 50 episodes
+=======
+        num_episodes=1000,  # Train each agent for 50 episodes
+>>>>>>> Stashed changes
         num_runs=1,       # Run 1 trial for each configuration
         seed=42           # Set random seed for reproducibility
     )
