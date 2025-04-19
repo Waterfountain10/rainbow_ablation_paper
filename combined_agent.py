@@ -80,10 +80,12 @@ class CombinedAgent:
         self.device = "cpu"
 
         # comment/uncomment below to use cpu/gpu
-        # if torch.cuda.is_available():
-        #     self.device = "cuda"
-        # if torch.mps.is_available():
-        #     self.device = "mps"
+        if torch.cuda.is_available():
+            self.device = "cuda"
+        if torch.mps.is_available():
+            self.device = "mps"
+            
+        print(self.device)
 
         if agent_config["usePrioritized"]:
             self.omega = combined_params["omega"]

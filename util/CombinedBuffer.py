@@ -24,10 +24,10 @@ class CombinedBuffer:
         self.buffer_config = buffer_config
         obs_buffer_shape = [size] + list(obs_shape)
         self.obs_dim = obs_shape
-        self.state_buf = np.zeros(obs_buffer_shape, dtype=np.float64)
-        self.next_state_buf = np.zeros(obs_buffer_shape, dtype=np.float64)
-        self.acts_buf = np.zeros(size, dtype=np.int64)
-        self.rewards_buf = np.zeros(size, dtype=np.float64)
+        self.state_buf = np.zeros(obs_buffer_shape, dtype=np.float32)
+        self.next_state_buf = np.zeros(obs_buffer_shape, dtype=np.float32)
+        self.acts_buf = np.zeros(size, dtype=np.int32)
+        self.rewards_buf = np.zeros(size, dtype=np.float32)
         self.done_buf = np.zeros(size)
         self.max_size = size
         self.batch_size = batch_size
