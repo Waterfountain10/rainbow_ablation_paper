@@ -65,25 +65,6 @@ env = gym.make(args.env, max_episode_steps=NUMBER_STEPS)
 
 '''
 ===========================================================================
-                            Creating Agent
-===========================================================================
-'''
-agent = CombinedAgent(
-    env=env,
-    mem_size=MEMORY_SIZE,
-    batch_size=BATCH_SIZE,
-    target_update_freq=TARGET_UPDATE_FREQ,
-    epsilon_decay=EPSILON_DECAY_STEPS,
-    alpha=LEARNING_RATE,
-    min_epsilon=MIN_EPSILON,
-    agent_config=rainbow_config,
-    combined_params=default_params,
-    gamma=default_params["gamma"],
-    hidden_dim=int(args.hidden_dim)
-)
-
-'''
-===========================================================================
                           Setting the seed
 ===========================================================================
 '''
@@ -128,9 +109,29 @@ else:
         np.random.seed(SEED+i)
         random.seed(SEED+i)
         torch.manual_seed(SEED+i)
+        
+        '''
+        ===========================================================================
+                                    Creating Agent
+        ===========================================================================
+        '''
+        agent = CombinedAgent(
+            env=env,
+            mem_size=MEMORY_SIZE,
+            batch_size=BATCH_SIZE,
+            target_update_freq=TARGET_UPDATE_FREQ,
+            epsilon_decay=EPSILON_DECAY_STEPS,
+            alpha=LEARNING_RATE,
+            min_epsilon=MIN_EPSILON,
+            agent_config=rainbow_config,
+            combined_params=default_params,
+            gamma=default_params["gamma"],
+            hidden_dim=int(args.hidden_dim)
+        )
+
 
         print("=============================================================")
-        print(f"Beginning training {model_name}.npy")
+        print(f"Beginning training trial {i+1} for {model_name}.npy")
         print("=============================================================")
         # Train and save the return values
         total_rewards[i] = agent.train(NUM_TOTAL_EPISODES)
