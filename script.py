@@ -41,14 +41,14 @@ def run_ddqn(params):
 
 if __name__ == "__main__":
     # Define hyperparameter ranges to test
-    memory_sizes = [40000]
-    batch_sizes = [32, 64, 128]
-    target_update_freqs = [3000, 6000, 32000] # Adjust based on ddqn.py defaults/needs
+    memory_sizes = [10000]
+    batch_sizes = [128]
+    target_update_freqs = [1000, 10000] # Adjust based on ddqn.py defaults/needs
     # epsilon_decay_steps_list = [500000, 1000000] # Adjust based on ddqn.py defaults/needs
-    learning_rates = [1e-4, 5e-5]
+    learning_rates = [5e-5]
     # min_epsilons = [0.01, 0.05]
-    omegas = [0.5, 0.6]
-    betas = [0.4, 0.5]
+    omegas = [0.6]
+    betas = [0.4]
 
     # Create all combinations of hyperparameters
     param_combinations = list(itertools.product(

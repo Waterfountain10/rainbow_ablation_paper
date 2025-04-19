@@ -1,90 +1,12 @@
 import numpy as np
-import random
-import torch
 import gymnasium as gym
 import matplotlib.pyplot as plt
+from params import NUMBER_STEPS, WINDOW_SIZE, parse_args, NUMBER_TEST_EPISODES
 from util.running_mean import running_mean
 from LoadData import load_dataset
 import gym_anytrading
 from combined_agent import CombinedAgent
-import argparse
 import os
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(description="Train a DQN agent.")
-    parser.add_argument(
-        "-memory_size", type=int, default=DEFAULT_MEMORY_SIZE, help="Replay buffer size"
-    )
-    parser.add_argument(
-        "-batch_size",
-        type=int,
-        default=DEFAULT_BATCH_SIZE,
-        help="Batch size for training",
-    )
-    parser.add_argument(
-        "-target_update_freq",
-        type=int,
-        default=DEFAULT_TARGET_UPDATE_FREQ,
-        help="Frequency of target network updates",
-    )
-    parser.add_argument(
-        "-epsilon_decay_steps",
-        type=float,
-        default=DEFAULT_EPSILON_DECAY_STEPS,
-        help="Steps over which epsilon decays",
-    )
-    parser.add_argument(
-        "-lr", type=float, default=DEFAULT_LEARNING_RATE, help="Learning rate"
-    )
-    parser.add_argument(
-        "-num_episodes",
-        type=int,
-        default=DEFAULT_NUM_EPISODES,
-        help="Number of training episodes",
-    )
-    parser.add_argument(
-        "-min_epsilon",
-        type=float,
-        default=DEFAULT_MIN_EPSILON,
-        help="Minimum epsilon value",
-    )
-    parser.add_argument(
-        "-n_step", type=int, default=default_n_step, help="Multi-step return N"
-    )
-    parser.add_argument("-omega", type=float, default=default_omega, help="Omega value")
-    parser.add_argument("-beta", type=float, default=default_beta, help="Beta value")
-
-    return parser.parse_args()
-
-
-SEED = 42
-np.random.seed(SEED)
-random.seed(SEED)
-torch.manual_seed(SEED)
-
-# =============== hyperparams ==================
-WINDOW_SIZE = 200
-NUMBER_STEPS = 700
-
-DEFAULT_MEMORY_SIZE = 80000  # 80K is good
-DEFAULT_BATCH_SIZE = 256  # find best
-
-# TODO target_update_freq needs to be different whether using ddqn or not
-DEFAULT_TARGET_UPDATE_FREQ = 32000  # find best
-TARGET_UPDATE_FREQ_DQN = 300
-
-DEFAULT_LEARNING_RATE = 5e-4  # find best
-DEFAULT_NUM_EPISODES = 700
-DEFAULT_EPSILON_DECAY_STEPS = (
-    NUMBER_STEPS * DEFAULT_NUM_EPISODES * 0.7
-)  # want epsilon be be at minimum around 70% in the training
-
-DEFAULT_MIN_EPSILON = 0.10  # find best
-
-default_omega = 0.6
-default_beta = 0.4
-default_n_step = 3
 
 args = parse_args()
 
@@ -145,8 +67,25 @@ for set in data_sets:
         )
     )
 
+test_envs = []
+for data_set in data_sets:
+    data_set = load_dataset(set, (WINDOW_SIZE + NUMBER_STEPS + 1) + NUMBER_STEPS)
+    test_envs.append(
+        gym.make(
+            "forex-v0",
+            df=data_set,
+            window_size=WINDOW_SIZE,
+            frame_bound=(
+                WINDOW_SIZE + NUMBER_STEPS + 1,
+                len(data_set),
+            ),  # logic: start at where we stopped training
+            unit_side="right",
+        )
+    )
+
 agent = CombinedAgent(
     envs=envs,
+    test_envs=test_envs,
     mem_size=MEMORY_SIZE,
     batch_size=BATCH_SIZE,
     target_update_freq=TARGET_UPDATE_FREQ,
