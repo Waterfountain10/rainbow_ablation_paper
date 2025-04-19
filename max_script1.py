@@ -30,9 +30,8 @@ def run_experiment(flags, ablation=False):
 
 
 if __name__ == "__main__":
-    # Run ablation models
-    for flag_pair in itertools.combinations(FLAGS, 5):
-        run_experiment(flag_pair, ablation=True)
+    # Run base models
+    for flag_pair in itertools.combinations(FLAGS, 1):
+        run_experiment(flag_pair)
 
-    # Run with all flags (Rainbow) (ablation to diff from DQN)
-    run_experiment(FLAGS, ablation=True)
+    run_experiment([])  # Run without any flags (DQN)
