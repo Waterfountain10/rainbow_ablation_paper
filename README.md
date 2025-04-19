@@ -59,8 +59,8 @@ Combined via the **`CombinedAgent`** class, each component can be *enabled or di
 │   ├── CombinedNetwork.py
 │   ├── SegmentTree.py
 │   └── running_mean.py
-├── combined_agent.py         # ⭐ core training logic
-├── main.py                   # ⭐ command‑line entry‑point
+├── combined_agent.py         # core training logic
+├── main.py                   # command‑line entry‑point
 ├── script.py                 # hyper‑parameter grid search helper
 ├── params.py                 # default CLI / training parameters
 ├── plot.py                   # post‑training visualisation
@@ -143,7 +143,7 @@ Key parameters:
 | Experiment | Command | Expected wall‑clock |
 |------------|---------|---------------------|
 | **Full Rainbow – Seaquest** | see *Atari* quick‑start above | ~90 min on RTX‑3070 |
-| **Ablation (No Noisy)** | add `--useNoisy` ⚠️️ _omitted_ | –6 % training time |
+| **Ablation (No Noisy)** | add `--useNoisy` _omitted_ | –6 % training time |
 | **Forex baseline DQN** | omit all `--use*` flags | ~25 min on Apple M2 |
 
 Pre‑trained reward curves (`.npy`) live in `test_checkpoints/` and can be plotted via:
@@ -154,12 +154,10 @@ python plot.py --input test_checkpoints/FullRainbow.npy
 ---
 ## Logging & Checkpoints
 * **Rewards** – NumPy arrays saved automatically to `test_checkpoints/<config>.npy`.
-* **Distributional plots** – if C51 is enabled, PNG heat‑maps appear under `distribution_plots/`.
-* (Planned) **TensorBoard** – run `tensorboard --logdir runs/` once PR #12 merges.
 
 ---
 ## Building the Report
-LaTeX sources live in `report/` (or the root if copied there).
+LaTeX sources live in `report/`
 
 ```bash
 cd report/
@@ -203,19 +201,19 @@ Thanks goes to these wonderful people ;)
         <a href="https://github.com/max-fong">
           <img src="https://avatars.githubusercontent.com/u/143747815?v=4" width="100px;" alt="Max Fong"/><br />
           <sub><b>Max Fong</b></sub>
-        </a><br />💻 📖
+        </a><br />
       </td>
       <td align="center" valign="top" width="20%">
         <a href="https://github.com/William-Lafond">
           <img src="https://avatars.githubusercontent.com/u/98282992?v=4" width="100px;" alt="William Kiem Lafond"/><br />
           <sub><b>William Kiem Lafond</b></sub>
-        </a><br />💻 📖 📊
+        </a><br />
       </td>
       <td align="center" valign="top" width="20%">
         <a href="https://github.com/denistsariov">
           <img src="https://avatars.githubusercontent.com/u/107961778?v=4" width="100px;" alt="Denis Tsariov"/><br />
           <sub><b>Denis Tsariov</b></sub>
-        </a><br />💻 🧪
+        </a><br />
       </td>
     </tr>
   </tbody>
