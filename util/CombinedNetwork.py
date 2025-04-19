@@ -13,7 +13,7 @@ class CombinedNeuralNet(nn.Module):
     },
         combined_params={
         # NoisyNet params
-        "sigma_init": 0.5,
+        "sigma_init": 0.9,
 
         # DistributiveNet params
         "atom_size": 51,

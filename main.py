@@ -25,9 +25,9 @@ NUM_EPISODES = args.num_episodes
 MIN_EPSILON = args.min_epsilon
 
 default_params = {
-    "omega": args.omega, 
-    "beta": args.beta, 
-    "td_epsilon": args.td_epsilon, 
+    "omega": args.omega,
+    "beta": args.beta,
+    "td_epsilon": args.td_epsilon,
     "v_min": args.v_min,
     "v_max": args.v_max,
     "atom_size": args.atom_size,

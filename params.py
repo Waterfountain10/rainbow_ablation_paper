@@ -15,6 +15,8 @@ WINDOW_SIZE = 200
 # Training Parameters
 NUMBER_STEPS = 500
 NUM_EPISODES = 600
+
+
 NUMBER_TEST_EPISODES = 100
 
 # General Parameters
@@ -95,19 +97,19 @@ def parse_args():
         help="Minimum epsilon value",
     )
     parser.add_argument(
-        "-n_step", 
-        type=int, 
-        default=NSTEP, 
+        "-n_step",
+        type=int,
+        default=NSTEP,
         help="Number of steps taken in multi-step learning"
     )
-    parser.add_argument("-omega", 
+    parser.add_argument("-omega",
         type=float,
-        default=OMEGA, 
+        default=OMEGA,
         help="Omega value"
         )
-    parser.add_argument("-beta", 
-        type=float, 
-        default=BETA, 
+    parser.add_argument("-beta",
+        type=float,
+        default=BETA,
         help="Beta value"
         )
     parser.add_argument(
