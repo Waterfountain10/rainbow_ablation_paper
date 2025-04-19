@@ -9,7 +9,7 @@ USER = "MAX"  # change to your name
 
 def run_experiment(flags, ablation=False):
     cmd = [
-        "python3.10", "main.py",  # "python3.10" is done for server, change to "python" for local
+        "python", "main.py",  # "python3.10" is done for server, change to "python" for local
         *flags,
     ]
     if ablation:
