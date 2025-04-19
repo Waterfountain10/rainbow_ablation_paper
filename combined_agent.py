@@ -22,8 +22,7 @@ from params import NUMBER_STEPS, NUMBER_TEST_EPISODES
 class CombinedAgent:
     def __init__(
         self,
-        envs: list[gym.Env],
-        test_envs: list[gym.Env],
+        env: list[gym.Env],
         mem_size: int,
         batch_size: int,
         target_update_freq: int,
@@ -56,9 +55,7 @@ class CombinedAgent:
         hidden_dim: int = 256
     ):
         """Init"""
-        self.envs = envs
-        self.test_envs = test_envs
-        self.env = random.choice(self.envs)
+        self.env = random.choice(env)
 
         self.obs_shape = self.env.observation_space.shape
         assert self.obs_shape is not None
@@ -429,11 +426,7 @@ class CombinedAgent:
             fixed_state, _ = self.env.reset()
 
         for episode in range(num_episodes):
-            self.env = random.choice(self.envs)
             state, _ = self.env.reset()
-            if self.testing:
-                self.env = random.choice(self.test_envs)
-                state, _ = self.env.reset()
 
             done = False
             ep_reward = 0

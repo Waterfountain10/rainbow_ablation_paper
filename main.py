@@ -57,46 +57,8 @@ print(rainbow_config)
                   Loading Data and Creating Environments
 ===========================================================================
 '''
-# Imported data sets
-data_sets = [
-    "data/AUDUSD_H4.csv",
-    "data/CADUSD_H4.csv",
-    "data/CHFUSD_H4.csv",
-    "data/EURUSD_H4.csv",
-    "data/GBPUSD_H4.csv",
-    "data/NZDUSD_H4.csv",
-]
-
-# Creating training environments
-envs = []
-for set in data_sets:
-    data_set = load_dataset(set, WINDOW_SIZE + NUMBER_STEPS + 1)
-    envs.append(
-        gym.make(
-            "forex-v0",
-            df=data_set,
-            window_size=WINDOW_SIZE,
-            frame_bound=(WINDOW_SIZE, len(data_set)),
-            unit_side="right",
-        )
-    )
-
-# Creating test environments (not used in training)
-test_envs = []
-for data_set in data_sets:
-    data_set = load_dataset(set, (WINDOW_SIZE + NUMBER_STEPS + 1) + NUMBER_STEPS)
-    test_envs.append(
-        gym.make(
-            "forex-v0",
-            df=data_set,
-            window_size=WINDOW_SIZE,
-            frame_bound=(
-                WINDOW_SIZE + NUMBER_STEPS + 1,
-                len(data_set),
-            ),  # logic: start at where we stopped training
-            unit_side="right",
-        )
-    )
+# creating the env
+env = gym.make(args.env, max_episode_steps=NUMBER_STEPS)
 
 '''
 ===========================================================================
@@ -104,8 +66,7 @@ for data_set in data_sets:
 ===========================================================================
 '''
 agent = CombinedAgent(
-    envs=envs,
-    test_envs=test_envs,
+    env=env,
     mem_size=MEMORY_SIZE,
     batch_size=BATCH_SIZE,
     target_update_freq=TARGET_UPDATE_FREQ,
@@ -129,7 +90,7 @@ os.makedirs("test_checkpoints", exist_ok=True)
 # Setting model name for saving
 config_components = [k[3:] for k, v in rainbow_config.items() if v]
 model_name = "_".join(config_components)
-params = f"results/mem{MEMORY_SIZE:d}_batch{BATCH_SIZE:d}_lr{LEARNING_RATE}_minEps{MIN_EPSILON}_gamma{args.gamma}"
+params = f"mem{MEMORY_SIZE:d}_batch{BATCH_SIZE:d}_lr{LEARNING_RATE}_minEps{MIN_EPSILON}_gamma{args.gamma}_hiddenDim{args.hidden_dim}"
 
 # TODO: change for training
 checkpoint_filename = f"test_checkpoints/{model_name}" + params +".npy"

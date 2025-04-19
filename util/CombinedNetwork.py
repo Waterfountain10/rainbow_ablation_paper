@@ -6,7 +6,7 @@ import numpy as np
 
 
 class CombinedNeuralNet(nn.Module):
-    def __init__(self, input_dim: Tuple[int, ...], output_dim: int, hidden_dim=256, network_config={
+    def __init__(self, input_dim: Tuple[int, ...], output_dim: int, hidden_dim=512, network_config={
         "useDuel": False,
         "useNoisy": False,
         "useDistributive": False,
