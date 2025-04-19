@@ -22,7 +22,7 @@ from params import NUMBER_STEPS, NUMBER_TEST_EPISODES
 class CombinedAgent:
     def __init__(
         self,
-        env: list[gym.Env],
+        env: gym.Env,
         mem_size: int,
         batch_size: int,
         target_update_freq: int,
@@ -55,7 +55,7 @@ class CombinedAgent:
         hidden_dim: int = 256
     ):
         """Init"""
-        self.env = random.choice(env)
+        self.env = env
 
         self.obs_shape = self.env.observation_space.shape
         assert self.obs_shape is not None

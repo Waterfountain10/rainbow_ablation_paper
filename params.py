@@ -187,5 +187,17 @@ def parse_args():
         default=HIDDEN_DIM,
         help="Minimum value for the value distribution",
     )
+    parser.add_argument(
+        "-env",
+        type=str,
+        default="",
+        help="name of the environment"
+    )
+    parser.add_argument(
+        "-ablation",
+        action="store_true",
+        default=False,
+        help="max asked me to add this"
+    )
 
     return parser.parse_args()
