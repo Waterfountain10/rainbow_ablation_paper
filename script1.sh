@@ -3,7 +3,7 @@
 #SBATCH --tasks-per-node=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=64G
-#SBATCH --time4:00:00
+#SBATCH --time=4:00:00
 #SBATCH --output=%N-%j.out
 #SBATCH --qos=normal
 #SBATCH --account=winter2025-comp579 
