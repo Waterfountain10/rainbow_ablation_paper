@@ -131,7 +131,7 @@ else:
 
 
         print("=============================================================")
-        print(f"Beginning training {model_name}.npy")
+        print(f"Beginning training trial {i+1} for {model_name}.npy")
         print("=============================================================")
         # Train and save the return values
         total_rewards[i] = agent.train(NUM_TOTAL_EPISODES)
