@@ -93,7 +93,7 @@ model_name = "_".join(config_components)
 params = f"mem{MEMORY_SIZE:d}_batch{BATCH_SIZE:d}_lr{LEARNING_RATE}_minEps{MIN_EPSILON}_gamma{args.gamma}_hiddenDim{args.hidden_dim}"
 
 # TODO: change for training
-checkpoint_filename = f"test_checkpoints/{model_name}" + params +".npy"
+checkpoint_filename = f"test_checkpoints/{model_name}" +".npy"
 
 if os.path.exists(checkpoint_filename):
     # Skip training if the file already exists
