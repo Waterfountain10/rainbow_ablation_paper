@@ -50,6 +50,8 @@ rainbow_config = {
     "useNstep": args.useNstep,
 }
 
+print(rainbow_config)
+
 '''
 ===========================================================================
                   Loading Data and Creating Environments
@@ -112,6 +114,8 @@ agent = CombinedAgent(
     min_epsilon=MIN_EPSILON,
     agent_config=rainbow_config,
     combined_params=default_params,
+    gamma=default_params["gamma"],
+    hidden_dim = args.hidden_dim
 )
 
 '''
@@ -125,9 +129,10 @@ os.makedirs("test_checkpoints", exist_ok=True)
 # Setting model name for saving
 config_components = [k[3:] for k, v in rainbow_config.items() if v]
 model_name = "_".join(config_components)
+params = f"results/mem{MEMORY_SIZE:d}_batch{BATCH_SIZE:d}_lr{LEARNING_RATE}_minEps{MIN_EPSILON}_gamma{args.gamma}"
 
 # TODO: change for training
-checkpoint_filename = f"test_checkpoints/{model_name}.npy"
+checkpoint_filename = f"test_checkpoints/{model_name}" + params +".npy"
 
 if os.path.exists(checkpoint_filename):
     # Skip training if the file already exists

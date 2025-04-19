@@ -53,6 +53,7 @@ class CombinedAgent:
             "n_step": 3,  # TODO  0 to anything
             "sigma_init": 0.5,
         },
+        hidden_dim: int = 256
     ):
         """Init"""
         self.envs = envs
@@ -153,12 +154,14 @@ class CombinedAgent:
             int(self.action_dim),
             network_config=self.agent_config,
             combined_params=combined_params,
+            hidden_dim=hidden_dim
         ).to(self.device)
         self.dqn_target = CombinedNeuralNet(
             self.obs_shape,
             int(self.action_dim),
             network_config=self.agent_config,
             combined_params=combined_params,
+            hidden_dim=hidden_dim
         ).to(self.device)
         # make identical copies of the neural net
         self.dqn_target.load_state_dict(self.dqn_network.state_dict())
@@ -182,7 +185,7 @@ class CombinedAgent:
         self.updating_eps = True
 
     def select_action(self, obs: np.ndarray) -> np.ndarray:
-        if np.random.random() < self.epsilon and not self.agent_config["useNoisy"]:
+        if not self.agent_config["useNoisy"] and np.random.random() < self.epsilon:
             return self.env.action_space.sample()
 
         obs_flat = obs.flatten()

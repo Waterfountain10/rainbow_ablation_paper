@@ -14,7 +14,7 @@ WINDOW_SIZE = 200
 
 # Training Parameters
 NUMBER_STEPS = 500
-NUM_EPISODES = 400
+NUM_EPISODES = 600
 NUMBER_TEST_EPISODES = 100
 
 # General Parameters
@@ -26,6 +26,7 @@ MIN_EPSILON = 0.10
 EPSILON_DECAY_STEPS = (
     NUMBER_STEPS * NUM_EPISODES * 0.7
 )
+HIDDEN_DIM = 256
 
 # Model Specific Parameters
 OMEGA = 0.6
@@ -179,6 +180,12 @@ def parse_args():
         action="store_true",
         default=False,
         help="Enable N-step Returns",
+    )
+    parser.add_argument(
+        "-hidden_dim",
+        type=float,
+        default=HIDDEN_DIM,
+        help="Minimum value for the value distribution",
     )
 
     return parser.parse_args()
