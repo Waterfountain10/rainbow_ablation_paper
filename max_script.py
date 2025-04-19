@@ -17,13 +17,13 @@ def run_experiment(flags, ablation=False):
     match USER :
         case "MAX":
             cmd.append("-env")
-            cmd.append("ALE/Asterix-v5")
+            cmd.append("ALE/Asterix-ram-v5")
         case "WILLIAM":
             cmd.append("-env")
-            cmd.append("ALE/RoadRunner-v5")
+            cmd.append("ALE/RoadRunner-ram-v5")
         case "DENIS":
             cmd.append("-env")
-            cmd.append("ALE/Seaquest-v5")
+            cmd.append("ALE/Seaquest-ram-v5")
 
     print("Running:", " ".join(cmd))
     subprocess.run(cmd, check=True)
