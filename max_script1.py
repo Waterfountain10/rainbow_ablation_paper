@@ -4,7 +4,7 @@ import subprocess
 FLAGS = ["-useDouble", "-usePrioritized",
          "-useDistributive", "-useDuel", "-useNstep", "-useNoisy"]
 
-USER = "MAX"  # change to your name
+USER = "WILLIAM"  # change to your name
 
 
 def run_experiment(flags, ablation=False):
