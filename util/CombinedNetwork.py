@@ -4,11 +4,9 @@ import torch.nn.functional as F
 import torch
 import numpy as np
 
-from params import HIDDEN_DIM
-
 
 class CombinedNeuralNet(nn.Module):
-    def __init__(self, input_dim: Tuple[int, ...], output_dim: int, hidden_dim=HIDDEN_DIM, network_config={
+    def __init__(self, input_dim: Tuple[int, ...], output_dim: int, hidden_dim=256, network_config={
         "useDuel": False,
         "useNoisy": False,
         "useDistributive": False,
