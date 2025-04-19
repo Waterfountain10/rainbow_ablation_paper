@@ -115,7 +115,7 @@ agent = CombinedAgent(
     agent_config=rainbow_config,
     combined_params=default_params,
     gamma=default_params["gamma"],
-    hidden_dim = args.hidden_dim
+    hidden_dim = int(args.hidden_dim)
 )
 
 '''

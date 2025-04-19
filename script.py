@@ -16,7 +16,7 @@ def run_ddqn(params):
         "-omega", str(omega),
         "-beta", str(beta),
         "-gamma", str(gamma),
-        "-hidden_dim", str(hidden_dims),
+        "-hidden_dim", str(hidden_dim),
         "-useDouble"
         # Add other arguments if needed, e.g., -num_episodes
         # "-num_episodes", "500" # Example: uncomment and set if you want to override the default
