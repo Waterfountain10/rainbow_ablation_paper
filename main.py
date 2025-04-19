@@ -82,6 +82,16 @@ agent = CombinedAgent(
 
 '''
 ===========================================================================
+                          Setting the seed
+===========================================================================
+'''
+SEED = 42
+np.random.seed(SEED)
+random.seed(SEED)
+torch.manual_seed(SEED)
+
+'''
+===========================================================================
                   Training Agent and Saving Results
 ===========================================================================
 '''
@@ -113,7 +123,9 @@ else:
     total_rewards = np.empty(3, dtype=object)
 
     for i in range(3):
-        # Check if the file already exists
+        np.random.seed(SEED+i)
+        random.seed(SEED+i)
+        torch.manual_seed(SEED+i)
 
         print("=============================================================")
         print(f"Beginning training {model_name}.npy")

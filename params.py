@@ -18,7 +18,7 @@ NUM_TOTAL_EPISODES = 900                # changed for atari (stocks was 500 + 20
 NUMBER_TEST_EPISODES = 200
 
 # General Parameters
-MEMORY_SIZE = 500000                    # changed for atari (stocks was 80 000)
+MEMORY_SIZE = 80000                     # changed for atari (stocks was 80 000)
 BATCH_SIZE = 32                         # changed for atari (stocks was 256)
 LEARNING_RATE = 1e-4                    # changed for atari (stocks was 5e-4)
 TARGET_UPDATE_FREQ = 8000               # changed for atari (stocks was 1000)
@@ -38,16 +38,6 @@ V_MAX = 10.0
 ATOM_SIZE = 51
 SIGMA_INIT = 0.5
 GAMMA = 0.99
-
-'''
-===========================================================================
-                          Setting the seed
-===========================================================================
-'''
-SEED = 42
-np.random.seed(SEED)
-random.seed(SEED)
-torch.manual_seed(SEED)
 
 '''
 ===========================================================================
