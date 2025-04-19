@@ -13,4 +13,4 @@ export PATH="$HOME/.local/bin:$PATH"
 
 module load miniconda/miniconda-winter2025
 
-python ~/COMP579P/comp579_project/max_script1.py
+python ~/comp579_project/max_script1.py
