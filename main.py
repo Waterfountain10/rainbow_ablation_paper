@@ -76,7 +76,7 @@ agent = CombinedAgent(
     agent_config=rainbow_config,
     combined_params=default_params,
     gamma=default_params["gamma"],
-    hidden_dim = int(args.hidden_dim)
+    hidden_dim=int(args.hidden_dim)
 )
 
 '''
@@ -85,24 +85,39 @@ agent = CombinedAgent(
 ===========================================================================
 '''
 # Create checkpoints directory if it doesn't exist
-os.makedirs("test_checkpoints", exist_ok=True)
+filename = "atari_checkpoints"
+os.makedirs(filename, exist_ok=True)
 
 # Setting model name for saving
-config_components = [k[3:] for k, v in rainbow_config.items() if v]
+if args.ablation:
+    config_components = [f'-{k[3:]}' for k,
+                         v in rainbow_config.items() if not v]
+else:
+    config_components = [k[3:] for k, v in rainbow_config.items() if v]
+
 model_name = "_".join(config_components)
-params = f"mem{MEMORY_SIZE:d}_batch{BATCH_SIZE:d}_lr{LEARNING_RATE}_minEps{MIN_EPSILON}_gamma{args.gamma}_hiddenDim{args.hidden_dim}"
 
-# TODO: change for training
-checkpoint_filename = f"test_checkpoints/{model_name}" +".npy"
+if len(model_name) == 0:
+    if args.ablation:
+        model_name = "Rainbow"  # Default name if no flags are set
+    else:
+        model_name = "DQN"
 
+checkpoint_filename = f"{filename}/{args.env}_{model_name}" + ".npy"
 if os.path.exists(checkpoint_filename):
     # Skip training if the file already exists
-    print(f"File with name {model_name}.npy already exists. Skipping training.")
+    print(
+        f"File with name {model_name}.npy already exists. Skipping training.")
 else:
-    print("=============================================================")
-    print(f"Beginning training {model_name}.npy")
-    print("=============================================================")
-    # Train and save the return values
-    rewards = agent.train(NUM_TOTAL_EPISODES)
-    np.save(checkpoint_filename, rewards)
+    total_rewards = np.empty(3, dtype=object)
+
+    for i in range(3):
+        # Check if the file already exists
+
+        print("=============================================================")
+        print(f"Beginning training {model_name}.npy")
+        print("=============================================================")
+        # Train and save the return values
+        total_rewards[i] = agent.train(NUM_TOTAL_EPISODES)
+    np.save(checkpoint_filename, total_rewards)
     print(f"Training complete. Rewards saved to {checkpoint_filename}")
