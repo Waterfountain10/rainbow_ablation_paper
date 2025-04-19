@@ -103,7 +103,7 @@ if len(model_name) == 0:
     else:
         model_name = "DQN"
 
-checkpoint_filename = f"{filename}/{args.env}_{model_name}" + ".npy"
+checkpoint_filename = f"{filename}/{args.env[3:]}_{model_name}" + ".npy"
 if os.path.exists(checkpoint_filename):
     # Skip training if the file already exists
     print(
