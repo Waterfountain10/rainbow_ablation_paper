@@ -21,7 +21,7 @@ TARGET_UPDATE_FREQ = args.target_update_freq
 
 EPSILON_DECAY_STEPS = int(args.epsilon_decay_steps)
 LEARNING_RATE = args.lr
-NUM_EPISODES = args.num_episodes
+NUM_TOTAL_EPISODES = args.num_episodes
 MIN_EPSILON = args.min_epsilon
 
 default_params = {
@@ -103,6 +103,6 @@ else:
     print(f"Beginning training {model_name}.npy")
     print("=============================================================")
     # Train and save the return values
-    rewards = agent.train(NUM_EPISODES)
+    rewards = agent.train(NUM_TOTAL_EPISODES)
     np.save(checkpoint_filename, rewards)
     print(f"Training complete. Rewards saved to {checkpoint_filename}")

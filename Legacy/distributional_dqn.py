@@ -27,7 +27,7 @@ class DistributionalDQN(DQN):
     The idea behind distributional DQN is to learn a distribution over the rewards isntead of a single
     value. This is done by using a neural network to approximate the distribution of the Q-values, which
     is then passed through a softmax to obtain the probabilities of each distribution. The distribution
-    is split over a number of atoms, which can be thought of as discrete bins for the Q-values. 
+    is split over a number of atoms, which can be thought of as discrete bins for the Q-values.
     '''
 
     def __init__(
@@ -140,7 +140,7 @@ class DistributionalDQN(DQN):
             "done": samples["done"],
         }
         loss = self._compute_dqn_loss(samples_dict)
-        
+
         self.optimizer.zero_grad()
         loss.backward()
         # After loss.backward()
@@ -265,7 +265,7 @@ class DistributionalDQN(DQN):
             # Track distributions periodically using the fixed state
             if episode % self.tracking_interval == 0:
                 self.track_distribution(fixed_state, episode)
-                  
+
         if show_progress and episode_bar is not None:
             episode_bar.close()
         self.env.close()
@@ -284,16 +284,16 @@ class DistributionalDQN(DQN):
             next_state_tensor = torch.FloatTensor(next_state).unsqueeze(0).to(self.device)
             reward = torch.FloatTensor([1.0]).unsqueeze(0).to(self.device)  # Assuming reward=1 for CartPole
             done = torch.FloatTensor([0.0]).unsqueeze(0).to(self.device)  # Assuming not done
-            
+
             # Get current distribution
             current_dist, _ = self.dqn_network(state_tensor, return_prob=True)
             current_dist = current_dist[0, action].cpu().numpy()
-            
+
             # Calculate target distribution (simplified version of what happens in _compute_dqn_loss)
             q_next = self.dqn_target(next_state_tensor).argmax(1)
             dist_next, _ = self.dqn_target(next_state_tensor, return_prob=True)
             dist_next = dist_next[0, q_next[0]].cpu().numpy()
-            
+
             # Plot both distributions
             plt.figure(figsize=(12, 6))
             plt.subplot(1, 2, 1)
@@ -301,13 +301,13 @@ class DistributionalDQN(DQN):
             plt.title(f"Current Distribution (Action {action})")
             plt.xlabel("Return Value")
             plt.ylabel("Probability")
-            
+
             plt.subplot(1, 2, 2)
             plt.bar(self.support.cpu().numpy(), dist_next, alpha=0.7, color='orange')
             plt.title(f"Next State Distribution (Best Action)")
             plt.xlabel("Return Value")
             plt.ylabel("Probability")
-            
+
             plt.tight_layout()
             plt.show()
 
@@ -315,18 +315,18 @@ class DistributionalDQN(DQN):
         """Store distribution data for a fixed state at specific episode"""
         with torch.no_grad():
             state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)
-            
+
             # Get distributions for all actions
             dist, q_values = self.dqn_network(state_tensor, return_prob=True)
-            
+
             # Get best action's distribution
             best_action = q_values[0].argmax().item()
             action_dist = dist[0, best_action].cpu().numpy()
-            
+
             # Store the distribution and episode number
             self.distribution_history.append(action_dist)
             self.distribution_episodes.append(episode_num)
-            
+
             # Print a simple tracking message
             print(f"Tracked distribution at episode {episode_num}, Q-value: {q_values[0, best_action].item():.2f}")
 
@@ -335,64 +335,64 @@ class DistributionalDQN(DQN):
         # Skip if we don't have enough data
         if len(self.distribution_history) < 2:
             return
-            
+
         # Create a 2D visualization showing the evolution of distributions
         plt.figure(figsize=(12, 8))
-        
+
         # Plot as a heatmap
         num_distributions = len(self.distribution_history)
         support = self.support.cpu().numpy()
-        
+
         # Create a 2D array for the heatmap
         dist_array = np.array(self.distribution_history)
-        
+
         # Plot heatmap
-        plt.imshow(dist_array, 
+        plt.imshow(dist_array,
                   aspect='auto',
                   extent=[support[0], support[-1], self.distribution_episodes[-1], self.distribution_episodes[0]],
                   cmap='viridis',
                   interpolation='nearest')
-        
+
         plt.colorbar(label='Probability')
         plt.xlabel('Return Value')
         plt.ylabel('Episode')
         plt.title('Evolution of Value Distribution During Training')
-        
+
         # Also create a 3D visualization showing select distributions
         fig = plt.figure(figsize=(12, 8))
         ax = fig.add_subplot(111, projection='3d')
-        
+
         # Plot a subset of distributions (to avoid overcrowding)
         max_to_show = min(10, num_distributions)
         indices = np.linspace(0, num_distributions-1, max_to_show, dtype=int)
-        
+
         # Create x, y coordinates for the 3D plot
         x = np.arange(len(support))
         for i in indices:
             y = self.distribution_episodes[i]
             z = self.distribution_history[i]
             ax.bar(x, z, zs=y, zdir='y', alpha=0.8, width=0.8)
-        
+
         ax.set_xlabel('Atom Index')
         ax.set_ylabel('Episode')
         ax.set_zlabel('Probability')
         ax.set_title('Value Distributions During Training')
-        
-        # Set x-ticks to show atom values 
+
+        # Set x-ticks to show atom values
         step = max(1, len(support) // 10)  # Show at most 10 ticks
         ax.set_xticks(np.arange(0, len(support), step))
         ax.set_xticklabels([f"{v:.1f}" for v in support[::step]])
-        
+
         # Save figures
         os.makedirs("distribution_plots", exist_ok=True)
         plt.savefig(f"distribution_plots/distribution_evolution.png")
         plt.show()
-        
+
     def plot_loss(self):
         """Plot the loss over episodes"""
         if len(self.loss) < 2:
             return
-        
+
         plt.figure(figsize=(12, 6))
         plt.plot(self.loss, label='Loss')
         plt.title('Loss Over Episodes')
@@ -400,7 +400,7 @@ class DistributionalDQN(DQN):
         plt.ylabel('Loss')
         plt.legend()
         plt.grid(True)
-        
+
         # Save figure
         os.makedirs("distribution_plots", exist_ok=True)
         plt.savefig(f"distribution_plots/loss_over_episodes.png")
@@ -415,7 +415,7 @@ if __name__ == "__main__":
     EPSILON_DECAY_STEPS = 5000
     LEARNING_RATE = 1e-5  # Try much smaller (current is 5e-4)
     # Small number for testing (increased it to compare with PER - will)
-    NUM_EPISODES = 2000
+    NUM_TOTAL_EPISODES = 2000
     SEED = 42
     np.random.seed(SEED)
     random.seed(SEED)
@@ -438,7 +438,7 @@ if __name__ == "__main__":
         atom_size=51,
     )
 
-    rewards = agent.train(NUM_EPISODES)
+    rewards = agent.train(NUM_TOTAL_EPISODES)
     # print("Rewards at end:", np.mean(rewards))
 
     # PLOT GRAPH AND SAVE IT

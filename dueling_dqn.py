@@ -207,7 +207,7 @@ if __name__ == "__main__":
     TARGET_UPDATE_FREQ = 100
     EPSILON_DECAY_STEPS = 1500
     LEARNING_RATE = 5e-4
-    NUM_EPISODES = 2000  # Small number for testing (increased it to compare with PER - will)
+    NUM_TOTAL_EPISODES = 2000  # Small number for testing (increased it to compare with PER - will)
     SEED = 42
     np.random.seed(SEED)
     random.seed(SEED)
@@ -228,7 +228,7 @@ if __name__ == "__main__":
         td_epsilon= 1e-6
     )
 
-    rewards = agent.train(NUM_EPISODES)
+    rewards = agent.train(NUM_TOTAL_EPISODES)
     #print("Rewards at end:", np.mean(rewards))
 
     # PLOT GRAPH AND SAVE IT

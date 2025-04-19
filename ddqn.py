@@ -70,7 +70,7 @@ class DDQN(DQN):
         loss = F.smooth_l1_loss(curr_q, q_target)
 
         return loss
-    
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a DQN agent.")
     parser.add_argument(
@@ -156,7 +156,7 @@ if __name__ == "__main__":
 
     EPSILON_DECAY_STEPS = int(args.epsilon_decay_steps)
     LEARNING_RATE = args.lr
-    NUM_EPISODES = args.num_episodes
+    NUM_TOTAL_EPISODES = args.num_episodes
     MIN_EPSILON = args.min_epsilon
 
     default_params = {
@@ -226,7 +226,7 @@ if __name__ == "__main__":
         # combined_params=default_params,
     )
 
-    rewards = agent.train(NUM_EPISODES)
+    rewards = agent.train(NUM_TOTAL_EPISODES)
     # rewards = [1]
     # print("Rewards at end:", np.mean(rewards))
     # PLOT GRAPH AND SAVE IT

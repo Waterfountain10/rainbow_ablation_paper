@@ -345,7 +345,7 @@ if __name__ == "__main__":
 
     EPSILON_DECAY_STEPS = args.epsilon_decay_steps
     LEARNING_RATE = args.lr
-    NUM_EPISODES = args.num_episodes
+    NUM_TOTAL_EPISODES = args.num_episodes
     MIN_EPSILON = args.min_epsilon
 
     default_params = {
@@ -405,7 +405,7 @@ if __name__ == "__main__":
         # combined_params=default_params,
     )
 
-    rewards = agent.train(NUM_EPISODES)
+    rewards = agent.train(NUM_TOTAL_EPISODES)
     # print("Rewards at end:", np.mean(rewards))
     # PLOT GRAPH AND SAVE IT
     plt.figure(figsize=(10, 5))

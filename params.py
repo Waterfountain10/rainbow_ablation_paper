@@ -13,30 +13,28 @@ import torch
 WINDOW_SIZE = 200
 
 # Training Parameters
-NUMBER_STEPS = 500
-NUM_EPISODES = 600
-
-
-NUMBER_TEST_EPISODES = 100
+NUMBER_STEPS = 700
+NUM_TOTAL_EPISODES = 900                # changed for atari (stocks was 500 + 200)
+NUMBER_TEST_EPISODES = 200
 
 # General Parameters
-MEMORY_SIZE = 80000
-BATCH_SIZE = 256
-LEARNING_RATE = 5e-4
-TARGET_UPDATE_FREQ = 1000
-MIN_EPSILON = 0.10
+MEMORY_SIZE = 500000                    # changed for atari (stocks was 80 000)
+BATCH_SIZE = 32                         # changed for atari (stocks was 256)
+LEARNING_RATE = 1e-4                    # changed for atari (stocks was 5e-4)
+TARGET_UPDATE_FREQ = 8000               # changed for atari (stocks was 1000)
+MIN_EPSILON = 0.01                      # changed for atari (stocks was 0.1)
 EPSILON_DECAY_STEPS = (
-    NUMBER_STEPS * NUM_EPISODES * 0.7
+    NUMBER_STEPS * NUM_TOTAL_EPISODES * 0.7
 )
-HIDDEN_DIM = 256
+HIDDEN_DIM = 512                        # changed for atari (stocks was 256)
 
 # Model Specific Parameters
 OMEGA = 0.6
 BETA = 0.4
 NSTEP = 3
 TD_EPSILON = 1e-6
-V_MIN = -100.0
-V_MAX = 100.0
+V_MIN = -10.0                           # changed for atari (stocks was -10 and 10)
+V_MAX = 10.0
 ATOM_SIZE = 51
 SIGMA_INIT = 0.5
 GAMMA = 0.99
@@ -87,7 +85,7 @@ def parse_args():
     parser.add_argument(
         "-num_episodes",
         type=int,
-        default=NUM_EPISODES,
+        default=NUM_TOTAL_EPISODES,
         help="Number of training episodes",
     )
     parser.add_argument(
