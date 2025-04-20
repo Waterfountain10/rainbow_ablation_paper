@@ -4,88 +4,83 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from util.running_mean import running_mean
-from params import NUM_TOTAL_EPISODES
+from params import NUM_TOTAL_EPISODES, NUMBER_TEST_EPISODES
 
-def plot_all_checkpoints(directory="atari_checkpoints", smoothing_window=50, figsize=(12, 8)):
-    """
-    Plot all .npy reward files in the specified directory.
-    Each file should contain a numpy array of shape (3, n_episodes) representing 3 trials.
-
-    Args:
-        directory (str): Directory containing .npy files with rewards
-        smoothing_window (int): Window size for smoothing the reward curves
-        figsize (tuple): Figure size (width, height) in inches
-    """
-    # Find all .npy files in directory
+def plot_all_checkpoints(directory="atari_checkpoints",
+                         smoothing_window=50,
+                         figsize=(12, 8)):
     npy_files = glob.glob(os.path.join(directory, "*.npy"))
-
     if not npy_files:
         print(f"No .npy files found in {directory}")
         return
 
-    # Set up the plot
-    plt.figure(figsize=figsize)
+    split_idx = NUM_TOTAL_EPISODES - NUMBER_TEST_EPISODES
 
-    # Prepare color cycle (using tab10 colormap for distinct colors)
-    colors = plt.cm.tab10(np.linspace(0, 1, min(10, len(npy_files))))
+    fig, ax = plt.subplots(figsize=figsize)
+    colors = plt.cm.tab10(np.linspace(0, 1, len(npy_files)))
 
-    # Track min/max values for y-axis scaling
-    all_min_rewards = []
-    all_max_rewards = []
+    all_min, all_max = [], []
+    test_stats = []
 
-    # Plot each file
-    for i, file_path in enumerate(npy_files):
-        # Extract meaningful name from filename
-        filename = os.path.basename(file_path)
-        name = filename.replace('.npy', '')
+    for i, fp in enumerate(npy_files):
+        label = os.path.basename(fp).replace('.npy','')[15:]
+        data = np.load(fp, allow_pickle=True)
+        avg = [(x + y + z)/3.0 for x,y,z in zip(data[0], data[1], data[2])]
+        all_min.append(min(avg)); all_max.append(max(avg))
 
-        try:
-            # Add allow_pickle=True to load object arrays
-            data = np.load(file_path, allow_pickle=True)
+        sm = running_mean(avg, smoothing_window)
+        ax.plot(sm, label=f"{label} (smoothed)",
+                color=colors[i], alpha=0.7)
 
-            avg = [float((x + y + z) / 3) for x, y, z in zip(data[0], data[1], data[2])]
+        test_stats.append((label, np.mean(avg[split_idx:]), colors[i]))
 
-            # Track min/max values for scaling
-            all_min_rewards.append(min(avg))
-            all_max_rewards.append(max(avg))
+    # split line
+    ax.axvline(split_idx, color='k', linestyle='--', linewidth=1)
 
-            smoothed_avg = running_mean(avg, smoothing_window)
-            smoothed_avg = np.array(smoothed_avg)
-            plot_label = f"{name[15:]} (smoothed)"
-            plt.plot(smoothed_avg, label=plot_label, color=colors[i % len(colors)], alpha=0.7)
+    # y‑limits
+    y_min, y_max = min(all_min), max(all_max)
+    yr = y_max - y_min; pad = yr * 0.05
+    ax.set_ylim(y_min - pad, y_max + pad)
 
-        except Exception as e:
-            print(f"Error plotting {filename}: {e}")
+    # low labels
+    ax.text(0.25, -0.1, "Training",
+            transform=ax.transAxes,
+            ha='center', va='top', fontsize=12, alpha=0.8)
+    ax.text(0.75, -0.1, "Testing\n(no training)",
+            transform=ax.transAxes,
+            ha='center', va='top', fontsize=12, alpha=0.8)
 
-    # Set plot labels and title
-    plt.xlabel('Episode', fontsize=12)
-    plt.ylabel('Reward', fontsize=12)
-    plt.title(f'Training Rewards Comparison for {name[:14]} (Averaged over 3 Trials)', fontsize=14)
-    plt.grid(True, linestyle='--', alpha=0.3)
+    # high labels at ~80% of the reward scale
+    high_y = y_min + 0.8 * yr
+    ax.text(split_idx/2, high_y, "Training",
+            ha='center', va='center', fontsize=12, weight='bold',
+            color='gray', alpha=0.6)
+    ax.text(split_idx + NUMBER_TEST_EPISODES/2, high_y,
+            "Testing\n(no training)",
+            ha='center', va='center', fontsize=12, weight='bold',
+            color='gray', alpha=0.6)
 
-    # Set x-axis to show integer episode numbers
-    plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
+    # test‑means box, down below legend
+    stats_text = "\n".join(f"{n}: {m:.1f}" for n,m,_ in test_stats)
+    ax.text(1.02, 0.65, stats_text,
+            transform=ax.transAxes,
+            fontsize=10,
+            verticalalignment='top',
+            bbox=dict(boxstyle='round', facecolor='white', alpha=0.7))
 
-    # Add legend with smaller font outside the plot
-    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=10)
-
-    # Set y-axis limits with some padding
-    if all_min_rewards:
-        y_min = float(min(all_min_rewards))
-        y_max = float(max(all_max_rewards))
-    else:
-        y_min = 0.0
-        y_max = 100.0
-
-    padding = (y_max - y_min) * 0.1  # 10% padding
-    plt.ylim(y_min - padding, y_max + padding)
-
-    # Adjust layout to make room for the legend
+    # labels & legend
+    ax.set_title('Training Rewards Comparison for RoadRunner‑ram\n'
+                 '(Averaged over 3 Trials)', fontsize=14)
+    ax.set_xlabel('Episode', fontsize=12)
+    ax.set_ylabel('Reward', fontsize=12)
+    ax.grid(True, linestyle='--', alpha=0.3)
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.legend(bbox_to_anchor=(1.05,1), loc='upper left', fontsize=10)
     plt.tight_layout()
 
-    # Save the figure
-    plt.savefig(os.path.join(directory, "rewards_comparison.png"), dpi=300, bbox_inches='tight')
-    print(f"Plot saved to {os.path.join(directory, 'rewards_comparison.png')}")
+    out = os.path.join(directory, "rewards_comparison.png")
+    plt.savefig(out, dpi=300, bbox_inches='tight')
+    print(f"Plot saved to {out}")
 
 if __name__ == "__main__":
     plot_all_checkpoints()
