@@ -3,17 +3,9 @@ import glob
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
-from util.running_mean import running_mean  # Import your custom running_mean
+from util.running_mean import running_mean
 
 def plot_all_checkpoints(directory="atari_checkpoints", smoothing_window=50, figsize=(12, 8)):
-    """
-    Plot all .npy reward files in the specified directory.
-    
-    Args:
-        directory (str): Directory containing .npy files with rewards
-        smoothing_window (int): Window size for smoothing the reward curves
-        figsize (tuple): Figure size (width, height) in inches
-    """
     # Find all .npy files in directory
     npy_files = glob.glob(os.path.join(directory, "*.npy"))
     
@@ -25,7 +17,7 @@ def plot_all_checkpoints(directory="atari_checkpoints", smoothing_window=50, fig
     plt.figure(figsize=figsize)
     
     # Prepare color cycle (using tab10 colormap for distinct colors)
-    colors = plt.cm.tab10(np.linspace(0, 1, min(10, len(npy_files)))) # type: ignore
+    colors = plt.cm.tab10(np.linspace(0, 1, min(10, len(npy_files))))
     
     # Track min/max values for y-axis scaling
     all_min_rewards = []
@@ -37,30 +29,29 @@ def plot_all_checkpoints(directory="atari_checkpoints", smoothing_window=50, fig
         filename = os.path.basename(file_path)
         name = filename.replace('.npy', '')
         
-        # Load the rewards
         try:
-            rewards = np.load(file_path)
+            # Load the rewards array
+            data = np.load(file_path, allow_pickle=True)
+            # Extract the rewards (assuming they're in the first element)
+            rewards = np.array(data[0])
             
-            # Track min/max for y-axis scaling
-            all_min_rewards.append(np.min(rewards))
-            all_max_rewards.append(np.max(rewards))
-            
-            # Plot raw data with low opacity
-            plt.plot(rewards, alpha=0.3, color=colors[i % len(colors)])
-            
-            # Smooth the data using running_mean
-            if len(rewards) > smoothing_window:
-                # Apply running mean smoothing
-                smoothed = running_mean(rewards, smoothing_window)
+            if len(rewards) > 0:
+                # Track min/max for y-axis scaling
+                all_min_rewards.append(np.min(rewards))
+                all_max_rewards.append(np.max(rewards))
                 
-                # Plot smoothed line (account for the offset due to window size)
-                x = range(smoothing_window-1, len(rewards))
-                plt.plot(x, smoothed, label=name, linewidth=2, color=colors[i % len(colors)])
-            else:
-                # If not enough data for smoothing, just plot the raw data
-                plt.plot(rewards, label=name, linewidth=2, color=colors[i % len(colors)])
+                # Plot raw data with low opacity
+                plt.plot(rewards, alpha=0.3, color=colors[i % len(colors)])
                 
-            print(f"Plotted {filename} with {len(rewards)} episodes")
+                # Smooth the data using running_mean
+                if len(rewards) > smoothing_window:
+                    smoothed = running_mean(rewards, smoothing_window)
+                    x = range(smoothing_window-1, len(rewards))
+                    plt.plot(x, smoothed, label=name, linewidth=2, color=colors[i % len(colors)])
+                else:
+                    plt.plot(rewards, label=name, linewidth=2, color=colors[i % len(colors)])
+                
+                print(f"Plotted {filename} with {len(rewards)} episodes")
         except Exception as e:
             print(f"Error loading {filename}: {e}")
     
@@ -77,10 +68,11 @@ def plot_all_checkpoints(directory="atari_checkpoints", smoothing_window=50, fig
     plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=10)
     
     # Set y-axis limits with some padding
-    y_min = min(all_min_rewards) if all_min_rewards else 0
-    y_max = max(all_max_rewards) if all_max_rewards else 100
-    padding = (y_max - y_min) * 0.1  # 10% padding
-    plt.ylim(y_min - padding, y_max + padding)
+    if all_min_rewards and all_max_rewards:
+        y_min = min(all_min_rewards)
+        y_max = max(all_max_rewards)
+        padding = (y_max - y_min) * 0.1  # 10% padding
+        plt.ylim(y_min - padding, y_max + padding)
     
     # Adjust layout to make room for the legend
     plt.tight_layout()
@@ -93,6 +85,3 @@ def plot_all_checkpoints(directory="atari_checkpoints", smoothing_window=50, fig
 
 if __name__ == "__main__":
     plot_all_checkpoints()
-    
-    # You can also specify parameters:
-    # plot_all_checkpoints(directory="other_checkpoints", smoothing_window=100)
