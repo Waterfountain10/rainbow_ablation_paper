@@ -2,7 +2,7 @@ import itertools
 import subprocess
 
 FLAGS = ["-useDouble", "-usePrioritized",
-         "-useDistributive", "-useDuel", "-useNstep", "-useNoisy"]
+        "-useDistributive", "-useDuel", "-useNstep", "-useNoisy"]
 
 USER = "WILLIAM"  # change to your name
 
