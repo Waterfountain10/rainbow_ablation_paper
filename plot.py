@@ -22,7 +22,7 @@ def _plot_group(npy_files, directory, suffix,
     for i, fp in enumerate(npy_files):
         name = os.path.basename(fp).replace('.npy','')
         # strip off game + separator to get the variant label
-        variant = name[len(game)+7:].lstrip('_-')
+        variant = name[len(game)+7:].lstrip('_')
         data = np.load(fp, allow_pickle=True)
         avg  = [(x+y+z)/3.0 for x,y,z in zip(data[0], data[1], data[2])]
         all_min.append(min(avg)); all_max.append(max(avg))
