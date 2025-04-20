@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from util.running_mean import running_mean  # Import your custom running_mean
 
-def plot_all_checkpoints(directory="test_checkpoints", smoothing_window=50, figsize=(12, 8)):
+def plot_all_checkpoints(directory="atari_checkpoints", smoothing_window=50, figsize=(12, 8)):
     """
     Plot all .npy reward files in the specified directory.
     
