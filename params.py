@@ -14,8 +14,10 @@ WINDOW_SIZE = 200
 
 # Training Parameters
 NUMBER_STEPS = 700
-NUM_TOTAL_EPISODES = 900                # changed for atari (stocks was 500 + 200)
+NUMBER_TRAIN_EPISODES = 700
 NUMBER_TEST_EPISODES = 200
+NUM_TOTAL_EPISODES = NUMBER_TRAIN_EPISODES+NUMBER_TEST_EPISODES                # changed for atari (stocks was 500 + 200)
+
 
 # General Parameters
 
@@ -26,7 +28,7 @@ LEARNING_RATE = 1e-4                    # changed for atari (stocks was 5e-4)
 TARGET_UPDATE_FREQ = 8000               # changed for atari (stocks was 1000)
 MIN_EPSILON = 0.01                      # changed for atari (stocks was 0.1)
 EPSILON_DECAY_STEPS = (
-    NUMBER_STEPS * NUM_TOTAL_EPISODES * 0.7
+    NUMBER_STEPS * NUMBER_TRAIN_EPISODES * 0.7
 )
 HIDDEN_DIM = 512                        # changed for atari (stocks was 256)
 
