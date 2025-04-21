@@ -167,15 +167,15 @@ class CombinedAgent:
 
         self.dqn_target.train(False)
 
-        if self.agent_config["usePrioritized"]:
-            # Change optimizer to RMSprop
-            self.optimizer = torch.optim.RMSprop(
-                self.dqn_network.parameters(),
-                lr=1e-3,  # Use higher learning rate with RMSprop
-                alpha=0.95,
-            )
-        else:
-            self.optimizer = torch.optim.Adam(self.dqn_network.parameters(), lr=alpha)
+        # if self.agent_config["usePrioritized"]:
+        #     # Change optimizer to RMSprop
+        #     self.optimizer = torch.optim.RMSprop(
+        #         self.dqn_network.parameters(),
+        #         lr=1e-3,  # Use higher learning rate with RMSprop
+        #         alpha=0.95,
+        #     )
+        # else:
+        self.optimizer = torch.optim.Adam(self.dqn_network.parameters(), lr=alpha)
 
         self.batch_size = batch_size
         self.testing = False

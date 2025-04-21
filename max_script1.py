@@ -4,7 +4,7 @@ import subprocess
 FLAGS = ["-useDouble", "-usePrioritized",
         "-useDistributive", "-useDuel", "-useNstep", "-useNoisy"]
 
-USER = "WILLIAM"  # change to your name
+USER = "MAX"  # change to your name
 
 
 def run_experiment(flags, ablation=False):
@@ -31,7 +31,12 @@ def run_experiment(flags, ablation=False):
 
 if __name__ == "__main__":
     # Run base models
-    for flag_pair in itertools.combinations(FLAGS, 1):
+    for flag_pair in itertools.combinations(FLAGS, 5):
         run_experiment(flag_pair)
 
     run_experiment([])  # Run without any flags (DQN)
+
+    # Run with all flags (Rainbow) (ablation to diff from DQN)
+    # run_experiment(FLAGS, ablation=True)
+    # for flag_pair in reversed(list(itertools.combinations(FLAGS, 5))):
+    #     run_experiment(flag_pair)
