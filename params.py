@@ -20,7 +20,7 @@ NUMBER_TEST_EPISODES = 200
 # General Parameters
 MEMORY_SIZE = 80000                     # changed for atari (stocks was 80 000)
 BATCH_SIZE = 32                         # changed for atari (stocks was 256)
-LEARNING_RATE = 1e-4                    # changed for atari (stocks was 5e-4)
+LEARNING_RATE = 0.0000625                    # changed for atari (stocks was 5e-4)
 TARGET_UPDATE_FREQ = 8000               # changed for atari (stocks was 1000)
 MIN_EPSILON = 0.01                      # changed for atari (stocks was 0.1)
 EPSILON_DECAY_STEPS = (
