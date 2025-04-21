@@ -84,7 +84,7 @@ class CombinedAgent:
             self.device = "cuda"
         if torch.mps.is_available():
             self.device = "mps"
-            
+
         print(self.device)
 
         if agent_config["usePrioritized"]:
@@ -167,15 +167,15 @@ class CombinedAgent:
 
         self.dqn_target.train(False)
 
-        if self.agent_config["usePrioritized"]:
+        if self.agent_config["usePrioritized"]: # any agents with PER must have RMS prop
             # Change optimizer to RMSprop
             self.optimizer = torch.optim.RMSprop(
                 self.dqn_network.parameters(),
-                lr=1e-3,  # Use higher learning rate with RMSprop
+                lr=2.5e-4,  # Use higher learning rate with RMSprop
                 alpha=0.95,
             )
         else:
-            self.optimizer = torch.optim.Adam(self.dqn_network.parameters(), lr=alpha)
+            self.optimizer = torch.optim.Adam(self.dqn_network.parameters(), lr=alpha) # default lr passed from params.py
 
         self.batch_size = batch_size
         self.testing = False
