@@ -5,19 +5,16 @@ from multiprocessing import Pool
 import os
 
 def run_ddqn(params):
-    lr, = params
+    flags = params
     command = [
         sys.executable,  # ← ensures you use your venv’s Python
         "main.py",
-        "-memory_size=50000",
-        "-lr", str(lr),
-        "-useDistributive",
         "-batch_size=64",
-        "-v_max=10000",
         "-env=ALE/Asterix-ram-v5",
-        "-v_min=-10",
+        "-v_min=10",
         "-v_max=10000",
         "-atom_size=51",
+        *flags,
     ]
     print(f"Running with params: {params}")
     try:
@@ -30,9 +27,11 @@ def run_ddqn(params):
 if __name__ == "__main__":
    
     os.makedirs("results", exist_ok=True)
-
-    lr = [2.5e-4, 1e-4, 5e-4, 1e-5, 5e-5]
-    param_combinations = list(itertools.product(lr))
+    
+    FLAGS = ["-useDouble", "-usePrioritized", "-useDuel", "-useNoisy", "-useDistributive", "-useNstep"]
+    param_combinations = list(itertools.combinations(FLAGS, 1))
+    param_combinations.append(FLAGS)  # Add the full set of flags
+    param_combinations.append([]) # Add the empty set of flags
 
     with Pool(processes=5) as pool:
         results = pool.map(run_ddqn, param_combinations)
