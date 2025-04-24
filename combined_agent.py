@@ -52,7 +52,8 @@ class CombinedAgent:
             "n_step": 3,  # TODO  0 to anything
             "sigma_init": 0.5,
         },
-        hidden_dim: int = 256
+        hidden_dim: int = 256,
+        use_cpu = False,
     ):
         """Init"""
         self.env = env
@@ -80,10 +81,11 @@ class CombinedAgent:
         self.device = "cpu"
 
         # comment/uncomment below to use cpu/gpu
-        if torch.cuda.is_available():
-            self.device = "cuda"
-        if torch.mps.is_available():
-            self.device = "mps"
+        if not use_cpu:
+            if torch.cuda.is_available():
+                self.device = "cuda"
+            if torch.mps.is_available():
+                self.device = "mps"
             
         print(self.device)
 
@@ -167,15 +169,16 @@ class CombinedAgent:
 
         self.dqn_target.train(False)
 
-        if self.agent_config["usePrioritized"]:
-            # Change optimizer to RMSprop
-            self.optimizer = torch.optim.RMSprop(
-                self.dqn_network.parameters(),
-                lr=1e-3,  # Use higher learning rate with RMSprop
-                alpha=0.95,
-            )
-        else:
-            self.optimizer = torch.optim.Adam(self.dqn_network.parameters(), lr=alpha)
+        # if self.agent_config["useDistributive"]:
+        #     # Change optimizer to RMSprop
+        #     self.optimizer = torch.optim.RMSprop(
+        #         self.dqn_network.parameters(),
+        #         lr=2.5e-4,
+        #         alpha=0.95,
+        #         eps=1e-2
+        #     )
+        # else:
+        self.optimizer = torch.optim.Adam(self.dqn_network.parameters(), lr=alpha, eps=(0.001/32))
 
         self.batch_size = batch_size
         self.testing = False
@@ -330,9 +333,9 @@ class CombinedAgent:
         return {
             "state": torch.FloatTensor(samples["obs"]).to(self.device),
             "next_state": torch.FloatTensor(samples["next_obs"]).to(self.device),
-            "action": torch.LongTensor(samples["acts"]).unsqueeze(1).to(self.device),
-            "reward": torch.FloatTensor(samples["rews"]).unsqueeze(1).to(self.device),
-            "done": torch.FloatTensor(samples["done"]).unsqueeze(1).to(self.device),
+            "action": torch.LongTensor(samples["acts"]).to(self.device),
+            "reward": torch.FloatTensor(samples["rews"].reshape(-1,1)).to(self.device),
+            "done": torch.FloatTensor(samples["done"].reshape(-1,1)).to(self.device),
             "idxs": samples.get("idxs"),
             "weights": samples.get("weights"),
         }
@@ -376,17 +379,10 @@ class CombinedAgent:
             Tz = torch.clamp(Tz, self.v_min, self.v_max)  # type: ignore
             b = (Tz - self.v_min) / self.delta_z  # scale to [0, atom_size - 1]
             l = b.floor().long()  # lower bound
-            u = b.ceil().long()  # upper bound
+            u = b.ceil().long() + 1  # upper bound
 
             # offset for indexing in flattened tensor
-            offset = (
-                torch.linspace(
-                    0, (self.batch_size - 1) * self.atom_size, self.batch_size
-                )
-                .long()
-                .unsqueeze(1)
-                .to(self.device)
-            )
+            offset = (torch.arange(self.batch_size, device=self.device) * self.atom_size).unsqueeze(1)
 
             # init projection tensor
             proj = torch.zeros((self.batch_size, self.atom_size)).to(self.device)
@@ -464,11 +460,12 @@ class CombinedAgent:
             ):
                 print("flipped to testing")
                 self.testing = True
+                self.epsilon = 0
 
-            if self.agent_config["useDistributive"] and not self.testing:
-                # Track distributions periodically using the fixed state
-                if episode % self.tracking_interval == 0:
-                    self.track_distribution(fixed_state, episode)  # type: ignore
+            # if self.agent_config["useDistributive"] and not self.testing:
+            #     # Track distributions periodically using the fixed state
+            #     if episode % self.tracking_interval == 0:
+            #         self.track_distribution(fixed_state, episode)  # type: ignore
 
             rewards.append(ep_reward)
             # rewards2d.append(ep_rewards)

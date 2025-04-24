@@ -28,10 +28,10 @@ class CombinedNeuralNet(nn.Module):
         if self.network_config["useDistributive"]:
             self.support = combined_params["support"]
             self.atom_size = combined_params["atom_size"]
-
-        # setting output dim to account for atom size if distributive net is used
-        self.output_dim = output_dim * \
-            self.atom_size if self.network_config["useDistributive"] else output_dim
+        else: 
+            self.atom_size = 1
+        
+        self.output_dim = output_dim
         flat_input_dim = int(np.prod(input_dim))
         self.fc1 = nn.Linear(flat_input_dim, hidden_dim)
 
@@ -42,13 +42,14 @@ class CombinedNeuralNet(nn.Module):
             self.fc3 = NoisyLayer(hidden_dim, self.output_dim, self.sigma_init)
         else:
             self.fc2 = nn.Linear(hidden_dim, hidden_dim)
-            self.fc3 = nn.Linear(hidden_dim, self.output_dim)
+            self.fc3 = nn.Linear(hidden_dim, self.output_dim * self.atom_size)
 
         if self.network_config["useDuel"]:
             self.fc_value = nn.Linear(hidden_dim, 1)
 
 
     def forward(self, x, return_prob=False):
+        x = x / 255.0  # Normalize input to [0,1] range
         x = torch.flatten(x, start_dim=1)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
@@ -61,14 +62,14 @@ class CombinedNeuralNet(nn.Module):
 
         if self.network_config["useDistributive"]:
             # Reshape to (batch_size, output_dim, atom_size)
-            q = q.view(q.size(0), -1, self.atom_size)
+            q = q.view(-1, self.output_dim, self.atom_size)
             # Get probability distribution and clamp for numerical stability
             prob = F.softmax(q, dim=-1)
             prob = prob.clamp(min=1e-3)
             # get weighted sum by summing over the atoms
             if (isinstance(self.support, torch.Tensor)):
-                q = torch.sum(prob * self.support, dim=-1)
-            return (prob, q) if return_prob else q
+                q = torch.sum(prob * self.support, dim=2)
+                return (prob, q) if return_prob else q
 
         return q
 

@@ -13,8 +13,8 @@ import torch
 WINDOW_SIZE = 200
 
 # Training Parameters
-NUMBER_STEPS = 700
-NUMBER_TRAIN_EPISODES = 700
+NUMBER_STEPS = 400
+NUMBER_TRAIN_EPISODES = 2000
 NUMBER_TEST_EPISODES = 200
 NUM_TOTAL_EPISODES = NUMBER_TRAIN_EPISODES+NUMBER_TEST_EPISODES                # changed for atari (stocks was 500 + 200)
 
@@ -24,11 +24,11 @@ NUM_TOTAL_EPISODES = NUMBER_TRAIN_EPISODES+NUMBER_TEST_EPISODES                #
 MEMORY_SIZE = 80000                     # changed for atari (stocks was 80 000)
 
 BATCH_SIZE = 32                         # changed for atari (stocks was 256)
-LEARNING_RATE = 1e-4                    # changed for atari (stocks was 5e-4)
+LEARNING_RATE = 5e-5                    # changed for atari (stocks was 5e-4)
 TARGET_UPDATE_FREQ = 8000               # changed for atari (stocks was 1000)
 MIN_EPSILON = 0.01                      # changed for atari (stocks was 0.1)
 EPSILON_DECAY_STEPS = (
-    NUMBER_STEPS * NUMBER_TRAIN_EPISODES * 0.7
+    NUMBER_STEPS * NUMBER_TRAIN_EPISODES * 0.75
 )
 HIDDEN_DIM = 512                        # changed for atari (stocks was 256)
 

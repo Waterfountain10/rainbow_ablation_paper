@@ -61,7 +61,7 @@ print(rainbow_config)
 ===========================================================================
 '''
 # creating the env
-env = gym.make(args.env)
+env = gym.make(args.env, max_episode_steps=NUMBER_STEPS)
 
 '''
 ===========================================================================
@@ -99,7 +99,7 @@ if len(model_name) == 0:
 
 trials = 1
 
-checkpoint_filename = f"{filename}/{args.env[3:]}_{model_name}_RSM" + ".npy"
+checkpoint_filename = f"{filename}/{args.env[3:]}_{model_name}_lr{args.lr}_v{args.v_max}_atom{args.atom_size}" + ".npy"
 if os.path.exists(checkpoint_filename):
     # Skip training if the file already exists
     print(
@@ -128,7 +128,8 @@ else:
             agent_config=rainbow_config,
             combined_params=default_params,
             gamma=default_params["gamma"],
-            hidden_dim=int(args.hidden_dim)
+            hidden_dim=int(args.hidden_dim),
+            use_cpu=True,
         )
 
 
