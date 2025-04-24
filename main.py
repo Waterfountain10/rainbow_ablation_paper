@@ -61,7 +61,7 @@ print(rainbow_config)
 ===========================================================================
 '''
 # creating the env
-env = gym.make(args.env, max_episode_steps=NUMBER_STEPS)
+env = gym.make(args.env)
 
 '''
 ===========================================================================
@@ -79,7 +79,7 @@ torch.manual_seed(SEED)
 ===========================================================================
 '''
 # Create checkpoints directory if it doesn't exist
-filename = "atari_checkpoints"
+filename = "atari_checkpoints/real"
 os.makedirs(filename, exist_ok=True)
 
 # Setting model name for saving
@@ -97,15 +97,17 @@ if len(model_name) == 0:
     else:
         model_name = "DQN"
 
+trials = 3
+
 checkpoint_filename = f"{filename}/{args.env[3:]}_{model_name}" + ".npy"
 if os.path.exists(checkpoint_filename):
     # Skip training if the file already exists
     print(
         f"File with name {model_name}.npy already exists. Skipping training.")
 else:
-    total_rewards = np.empty(3, dtype=object)
+    total_rewards = np.empty(trials, dtype=object)
 
-    for i in range(3):
+    for i in range(trials):
         np.random.seed(SEED+i)
         random.seed(SEED+i)
         torch.manual_seed(SEED+i)

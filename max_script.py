@@ -10,6 +10,10 @@ USER = "MAX"  # change to your name
 def run_experiment(flags, ablation=False):
     cmd = [
         "python3.10", "main.py",  # "python3.10" is done for server, change to "python" for local
+        "-batch_size=64",
+        "-v_min=10",
+        "-v_max=10000",
+        "-atom_size=51",
         *flags,
     ]
     if ablation:
@@ -31,9 +35,5 @@ def run_experiment(flags, ablation=False):
 
 if __name__ == "__main__":
     # Run ablation models
-    # for flag_pair in itertools.combinations(FLAGS, 5):
-    #     run_experiment(flag_pair, ablation=True)
-
-    # # Run with all flags (Rainbow) (ablation to diff from DQN)
-    # run_experiment(FLAGS, ablation=True)
-    run_experiment(["-useDistributive"])
+    for flag_pair in itertools.combinations(FLAGS, 5):
+        run_experiment(flag_pair, ablation=True)

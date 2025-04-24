@@ -7,7 +7,8 @@ from util.running_mean import running_mean
 from params import NUM_TOTAL_EPISODES, NUMBER_TEST_EPISODES
 
 def _plot_group(npy_files, directory, suffix,
-                smoothing_window=50, figsize=(12,8)):
+                smoothing_window=50, figsize=(12,8),
+                exclude_variants=None, min_avg=None, max_avg=None):
     # derive game name from the first file
     base0 = os.path.basename(npy_files[0]).replace('.npy','')
     game = base0.split('_')[0].split('-')[0]
@@ -25,14 +26,41 @@ def _plot_group(npy_files, directory, suffix,
 
         variant = name[len(game)+7:].lstrip('_')
         data = np.load(fp, allow_pickle=True)
-        avg  = [(x+y+z)/3.0 for x,y,z in zip(data[0], data[1], data[2])]
+        if data.ndim == 1:
+            avg = data[0]
+        else:
+            avg = [(x+y+z)/3.0 for x,y,z in zip(data[0], data[1], data[2])]
+
+        # make sure there are test episodes to average
+        if len(avg) < split_idx:
+            print(f"Skipping {variant}: only {len(avg)} episodes (< split_idx {split_idx})")
+            continue
+
+        # now slice out the test part and compute its mean
+        test_slice = avg[split_idx:]
+        mean_val = np.mean(test_slice)
+
+        # skip by name
+        if exclude_variants and variant in exclude_variants:
+            continue
+        # skip if below/above thresholds (now using test‐mean)
+        if min_avg is not None and mean_val < min_avg:
+            continue
+        if max_avg is not None and mean_val > max_avg:
+            continue
+
         all_min.append(min(avg)); all_max.append(max(avg))
 
         sm = running_mean(avg, smoothing_window)
         ax.plot(sm, label=f"{variant} (smoothed)",
                 color=colors[i], alpha=0.7)
 
-        test_stats.append((variant, np.mean(avg[split_idx:])))
+        test_stats.append((variant, mean_val))
+
+    # if no runs survived the filters, bail out
+    if not all_min:
+        print(f"No variants to plot for {game} after applying filters.")
+        return
 
     # vertical line
     ax.axvline(split_idx, color='k', linestyle='--', linewidth=1)
@@ -80,7 +108,7 @@ def _plot_group(npy_files, directory, suffix,
     plt.savefig(out, dpi=300, bbox_inches='tight')
     print(f"Plot saved to {out}")
 
-def plot_all_checkpoints(directory="atari_checkpoints",
+def plot_all_checkpoints(directory="atari_checkpoints/real",
                          smoothing_window=50,
                          figsize=(12,8)):
     npy_files = glob.glob(os.path.join(directory, "*.npy"))
