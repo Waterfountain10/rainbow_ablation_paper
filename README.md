@@ -116,7 +116,7 @@ This project follows the [all-contributors](https://github.com/all-contributors/
 * **William Kiem Lafond** – Prioritized, DuelNet, NoisyNet components, report writing.
 * **Denis Tsariov** – base DQN/DDQN agents, N-step Learning, hyper‑parameter tuning.
 
-📄 [Read the full report](report/final_report.pdf)
+📄 [Read the full report](COMP579__Recreating_Rainbow___Final_Report.pdf)
 
 Project for *COMP 579 Deep Reinforcement Learning* with Doina Precup and Isabeau Prémont-Schwarz, McGill University, 2025.
 
