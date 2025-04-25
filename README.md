@@ -4,6 +4,7 @@
 
 > **Modular Rainbow DQN re‑implementation in PyTorch with an easy‐to‑toggle component switchboard, benchmarked on three Atari games (*Seaquest*, *Asterix*, *Road Runner*) and a high‑volatility Forex trading simulator.**
 
+Link to Video (unlisted) : https://www.youtube.com/watch?v=v_v7eYagHHs
 ---
 ## Overview
 This project implements Rainbow DQN from scratch with full modularity, enabling easy toggling of individual components (Double DQN, PER, Dueling, Noisy, Distributional, N-step).
