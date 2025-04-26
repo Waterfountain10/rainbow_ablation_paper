@@ -171,8 +171,7 @@ class CombinedAgent:
             # Change optimizer to RMSprop
             self.optimizer = torch.optim.RMSprop(
                 self.dqn_network.parameters(),
-                lr=1e-3,  # Use higher learning rate with RMSprop
-                alpha=0.95,
+                lr=alpha
             )
         else:
             self.optimizer = torch.optim.Adam(self.dqn_network.parameters(), lr=alpha)

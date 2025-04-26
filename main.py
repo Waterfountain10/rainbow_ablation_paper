@@ -8,6 +8,8 @@ import gym_anytrading
 from combined_agent import CombinedAgent
 import os
 import ale_py
+import random
+import torch
 gym.register_envs(ale_py)
 '''
 ===========================================================================
