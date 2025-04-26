@@ -49,6 +49,7 @@ class CombinedNeuralNet(nn.Module):
 
 
     def forward(self, x, return_prob=False):
+        x = x / 255.0  # Normalize input to [0,1] range
         x = torch.flatten(x, start_dim=1)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
@@ -64,7 +65,7 @@ class CombinedNeuralNet(nn.Module):
             q = q.view(q.size(0), -1, self.atom_size)
             # Get probability distribution and clamp for numerical stability
             prob = F.softmax(q, dim=-1)
-            prob = prob.clamp(min=1e-3)
+            prob = prob.clamp(min=1e-5)
             # get weighted sum by summing over the atoms
             if (isinstance(self.support, torch.Tensor)):
                 q = torch.sum(prob * self.support, dim=-1)

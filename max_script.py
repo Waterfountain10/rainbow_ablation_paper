@@ -4,12 +4,12 @@ import subprocess
 FLAGS = ["-useDouble", "-usePrioritized",
          "-useDistributive", "-useDuel", "-useNstep", "-useNoisy"]
 
-USER = "MAX"  # change to your name
+USER = "WILLIAM"  # change to your name
 
 
 def run_experiment(flags, ablation=False):
     cmd = [
-        "python", "main.py",  # "python3.10" is done for server, change to "python" for local
+        "python3.10", "main.py",  # "python3.10" is done for server, change to "python" for local
         *flags,
     ]
     if ablation:
@@ -30,12 +30,6 @@ def run_experiment(flags, ablation=False):
 
 
 if __name__ == "__main__":
-    # Run base models
-    for flag_pair in itertools.combinations(FLAGS, 1):
-        run_experiment(flag_pair)
-
-    run_experiment([])  # Run without any flags (DQN)
-
     # Run ablation models
     for flag_pair in itertools.combinations(FLAGS, 5):
         run_experiment(flag_pair, ablation=True)

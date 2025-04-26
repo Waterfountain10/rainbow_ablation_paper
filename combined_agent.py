@@ -52,7 +52,8 @@ class CombinedAgent:
             "n_step": 3,  # TODO  0 to anything
             "sigma_init": 0.5,
         },
-        hidden_dim: int = 256
+        hidden_dim: int = 256,
+        use_cpu = False,
     ):
         """Init"""
         self.env = env
@@ -80,10 +81,11 @@ class CombinedAgent:
         self.device = "cpu"
 
         # comment/uncomment below to use cpu/gpu
-        if torch.cuda.is_available():
-            self.device = "cuda"
-        if torch.mps.is_available():
-            self.device = "mps"
+        if not use_cpu:
+            if torch.cuda.is_available():
+                self.device = "cuda"
+            if torch.mps.is_available():
+                self.device = "mps"
             
         print(self.device)
 
@@ -167,14 +169,16 @@ class CombinedAgent:
 
         self.dqn_target.train(False)
 
-        if self.agent_config["usePrioritized"]:
-            # Change optimizer to RMSprop
-            self.optimizer = torch.optim.RMSprop(
-                self.dqn_network.parameters(),
-                lr=alpha
-            )
-        else:
-            self.optimizer = torch.optim.Adam(self.dqn_network.parameters(), lr=alpha)
+        # if self.agent_config["useDistributive"]:
+        #     # Change optimizer to RMSprop
+        #     self.optimizer = torch.optim.RMSprop(
+        #         self.dqn_network.parameters(),
+        #         lr=alpha,
+        #         alpha=0.95,
+        #         eps=1e-2
+        #     )
+        # else:
+        self.optimizer = torch.optim.Adam(self.dqn_network.parameters(), lr=alpha, eps=(0.001/32))
 
         self.batch_size = batch_size
         self.testing = False
@@ -331,7 +335,7 @@ class CombinedAgent:
             "next_state": torch.FloatTensor(samples["next_obs"]).to(self.device),
             "action": torch.LongTensor(samples["acts"]).unsqueeze(1).to(self.device),
             "reward": torch.FloatTensor(samples["rews"]).unsqueeze(1).to(self.device),
-            "done": torch.FloatTensor(samples["done"]).unsqueeze(1).to(self.device),
+            "done": torch.FloatTensor(samples["done"]).float().unsqueeze(1).to(self.device),
             "idxs": samples.get("idxs"),
             "weights": samples.get("weights"),
         }
@@ -463,6 +467,7 @@ class CombinedAgent:
             ):
                 print("flipped to testing")
                 self.testing = True
+                self.epsilon = 0
 
             if self.agent_config["useDistributive"] and not self.testing:
                 # Track distributions periodically using the fixed state
@@ -501,8 +506,8 @@ class CombinedAgent:
             episode_bar.close()
         self.env.close()
 
-        # if self.agent_config["useDistributive"]: # TODO may want to enable later
-        #     self.plot_distribution_evolution()
+        if self.agent_config["useDistributive"]: # TODO may want to enable later
+            self.plot_distribution_evolution()
 
         return rewards
 
