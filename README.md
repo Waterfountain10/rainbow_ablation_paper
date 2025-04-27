@@ -4,7 +4,8 @@
 
 > **Modular Rainbow DQN re‑implementation in PyTorch with an easy‐to‑toggle component switchboard, benchmarked on three Atari games (*Seaquest*, *Asterix*, *Road Runner*) and a high‑volatility Forex trading simulator.**
 
-Link to Video (unlisted) : https://www.youtube.com/watch?v=v_v7eYagHHs
+📄 [Read our paper here!](COMP579__Recreating_Rainbow___Final_Report.pdf)
+Link to Highlight Video (unlisted) : https://www.youtube.com/watch?v=v_v7eYagHHs
 ---
 ## Overview
 This project implements Rainbow DQN from scratch with full modularity, enabling easy toggling of individual components (Double DQN, PER, Dueling, Noisy, Distributional, N-step).
@@ -116,8 +117,6 @@ This project follows the [all-contributors](https://github.com/all-contributors/
 * **Max Fong** – categorical module, codebase refactor, scripts.
 * **William Kiem Lafond** – Prioritized, DuelNet, NoisyNet components, report writing.
 * **Denis Tsariov** – base DQN/DDQN agents, N-step Learning, hyper‑parameter tuning.
-
-📄 [Read the full report](COMP579__Recreating_Rainbow___Final_Report.pdf)
 
 Project for *COMP 579 Deep Reinforcement Learning* with Doina Precup and Isabeau Prémont-Schwarz, McGill University, 2025.
 
