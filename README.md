@@ -1,4 +1,4 @@
-# Our Recreation of the Rainbow DQN Paper
+# Slightly Worse Rainbow (recreating Google's Algo for Reinforcement Learning)
 
 [![Made with PyTorch](https://img.shields.io/badge/PyTorch-2.1%2B-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org)  [![All Contributors](https://img.shields.io/badge/all_contributors-3-orange.svg?style=flat-square)](#contributors)
 
