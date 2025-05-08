@@ -4,7 +4,7 @@
 
 > **Modular Rainbow DQN re‑implementation in PyTorch with an easy‐to‑toggle component switchboard, benchmarked on three Atari games (*Seaquest*, *Asterix*, *Road Runner*) and a high‑volatility Forex trading simulator.**
 
-# 📄 [Read our paper here!](COMP579__Recreating_Rainbow___Final_Report.pdf)
+# 📄 [Read our paper here!](paper/COMP579__Recreating_Rainbow___Final_Report.pdf)
 
 Link to Highlight Video (unlisted) : https://www.youtube.com/watch?v=v_v7eYagHHs
 ---
@@ -53,15 +53,12 @@ python main.py -env SeaquestNoFrameskip-v4 -num_episodes 700 -useNoisy -useDuel 
 ## Directory Structure
 ```text
 .
-├── atari_checkpoints/       # .npy reward curves from experiments
-├── util/                    # SegmentTree, CombinedBuffer, CombinedNetwork, etc.
+├── atari_checkpoints/       # .npy reward curves from experiments (used for plot scripts)
+├── agent/                   # All components for agent including combined class
 ├── combined_agent.py        # Main Rainbow agent logic
-├── main.py / main1.py       # Run ablations vs baseline models
-├── max_script.py / max_script1.py   # Local test runners
-├── script.sh / script1.sh   # SLURM submission scripts
-├── params.py                # Default parameters
-├── plot.py                  # Plotting utilities
-├── README.md, requirements.txt
+├── scripts                  # main scripts to run regular/ablation mode, and also bash scripts for slurm GPU jobs
+├── plotting                  # Plot scripts for regular and ablation mode
+...
 └── Legacy/                  # Archived code, not used
 ```
 
