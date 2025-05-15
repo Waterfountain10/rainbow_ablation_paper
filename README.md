@@ -4,7 +4,7 @@
 
 > **Modular Rainbow DQN re‑implementation in PyTorch with an easy‐to‑toggle component switchboard, benchmarked on three Atari games (*Seaquest*, *Asterix*, *Road Runner*) and a high‑volatility Forex trading simulator.**
 
-# 📄 [Read our paper here!](paper/COMP579__Recreating_Rainbow___Final_Report.pdf)
+# 📄 [Read our paper here!](paper/final_paper.pdf)
 
 Link to Highlight Video (unlisted) : https://www.youtube.com/watch?v=v_v7eYagHHs
 ---
